@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+    
+    <item android:id="@+id/list_button"
+  	   	android:icon="@drawable/ic_action_view_as_list"
+    		android:title="@string/show_tiles"
+    		android:showAsAction="ifRoom"/>
+	
+	<item android:id="@+id/map_button"
+	    	android:icon="@drawable/ic_action_map"
+	    	android:title="@string/show_map"
+	    	android:showAsAction="ifRoom"/>
+
+</menu>

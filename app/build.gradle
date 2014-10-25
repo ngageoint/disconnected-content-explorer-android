@@ -1,0 +1,41 @@
+apply plugin: 'com.android.application'
+
+project.ext {
+    archivesBaseName = 'dice'
+}
+
+android {
+    compileSdkVersion 19
+    buildToolsVersion '20.0.0'
+
+    defaultConfig {
+        applicationId 'mil.nga.dice'
+        minSdkVersion 14
+        targetSdkVersion 19
+    }
+
+    buildTypes {
+        release {
+            runProguard false
+            proguardFiles(getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt')
+        }
+    }
+
+    packagingOptions {
+        exclude 'META-INF/LICENSE'
+        exclude 'META-INF/NOTICE'
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_7
+        targetCompatibility JavaVersion.VERSION_1_7
+    }
+}
+
+dependencies {
+    compile 'com.android.support:support-v4:20.0.0'
+    compile 'com.google.android.gms:play-services:6.1.11'
+    compile files('libs/jackson-annotations-2.3.3.jar')
+    compile files('libs/jackson-core-2.3.3.jar')
+    compile files('libs/jackson-databind-2.3.3.jar')
+    compile files('libs/jts-1.8.jar')
+}

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">DICE</string>
+    <string name="title_report_detail">Report Detail</string>
+    <string name="open_note">Open note</string>
+    <string name="title_activity_note">Note</string>
+    <string name="cancel_note">Cancel</string>
+    <string name="save_note">Save</string>
+    <string name="show_tiles">Tile View</string>
+    <string name="show_map">Map View</string>
+
+</resources>
