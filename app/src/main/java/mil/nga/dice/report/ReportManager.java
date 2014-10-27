@@ -1,19 +1,17 @@
 package mil.nga.dice.report;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
-import mil.nga.dice.listview.ReportListFragment;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import mil.nga.dice.listview.ReportListFragment;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class ReportManager {
 	// Time units, and thread count for threading
@@ -32,8 +30,6 @@ public class ReportManager {
 	private final ThreadPoolExecutor mReportLoadingPool;
 	// The list of reports
 	private final List <Report> mReports = new ArrayList<>();
-	// The map of report list items
-	private final Map<String, Report> reportMap = new HashMap<>();
 	private final Handler mHandler;
 
 	// TODO: referencing a ui class here smells
@@ -71,8 +67,7 @@ public class ReportManager {
 			}
 		};
 	}
-	
-	
+
 	/**
 	 * Returns the ReportManager object
 	 * @return The global ReportManager object
@@ -80,7 +75,6 @@ public class ReportManager {
 	public static ReportManager getInstance() {
 		return sInstance;
 	}
-	
 	
 	/**
 	 * Handle sending messages based on the state of a report task.
@@ -102,17 +96,14 @@ public class ReportManager {
 				break;
 		}
 	}
-	
-	
+
 	public List<Report> getReports() {				
 		return mReports;
 	}
 	
-	
 	public void loadReports() {
 		mReports.clear();
-		reportMap.clear();
-		
+
 		if (!diceRoot.exists()) {
 			return;
 		}
@@ -140,7 +131,8 @@ public class ReportManager {
 				// TODO: need to refactor this to use the threadpool properly
 				startUnzip(report);
 			}
-			else if (extension.equals("pdf")) { // need to look into more PDF options on android
+			else if (extension.equals("pdf")) {
+			 	// TODO: need to look into more PDF options on android
 				report.setTitle(filename);
 				report.setEnabled(true);
 				report.setDescription("");
@@ -148,62 +140,42 @@ public class ReportManager {
 				this.addReport(report);
 			}
 			else if (extension.equalsIgnoreCase("docx")) {
-				report.setTitle(filename);
-				report.setDescription("Building report document...");
-				report.setPath(diceRoot.getPath() + File.separator +
-						filename.substring(0, filename.length() - extension.length()));
-				this.addReport(report);
-				startOfficeDocCoversion(report);
+				// TODO: word files
+			}
+			else if (extension.equalsIgnoreCase("pptx")) {
+				// TODO: powerpoint files
+			}
+			else if (extension.equalsIgnoreCase("xlsx")) {
+				// TODO: excel files
 			}
 		}
 	}
-	
-	
+
 	private void startUnzip(Report report) {
 		mReportLoadingPool.execute(new ReportUnzipRunnable(report));
 	}
-
-	private void startOfficeDocCoversion(Report report) {
-	}
-	
 	
 	public Report getReportWithID(String id) {
-		Report report = null;
-		
-		if (mReports.size() > 0) {
-			for (int i = 0; i < mReports.size(); i++) {
-				Report r = mReports.get(i);
-				if (r.getId() != null && r.getId().equals(id)) {
-					return r;
-				}
+		for (Report r : mReports) {
+			if (r.getId() != null && r.getId().equals(id)) {
+				return r;
 			}
 		}
-		
-		return report;
+		return null;
 	}
-	
 	
 	private void addReport(Report report) {
 		mReports.add(report);
-		reportMap.put(report.getTitle(), report);
 	}
-	
 	
 	public List<Report> getReportList() {
 		return mReports;
 	}
-	
-	
-	public Map<String, Report> getReportMap () {
-		return reportMap;
-	}
-	
-	
+
 	public File getDiceRoot() {
 		return diceRoot;
 	}
-	
-	
+
 	public void setReportListFragment(ReportListFragment reportListFragment) {
 		mReportListFragment = reportListFragment;
 	}
