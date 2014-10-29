@@ -13,6 +13,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+// TODO: change to be a service?
 public class ReportManager {
 	// Time units, and thread count for threading
 	private static final int KEEP_ALIVE_TIME = 1;
@@ -34,12 +35,11 @@ public class ReportManager {
 
 	// TODO: referencing a ui class here smells
 	private ReportListFragment mReportListFragment;
+	// TODO: use app data directory instead of storage root?
 	private File root = Environment.getExternalStorageDirectory();
 	private File diceRoot = new File(root.getPath(), "DICE");
 
-	private ReportManager () {
-		super();
-
+	private ReportManager() {
 		mReportLoadingPool = new ThreadPoolExecutor(
 				CORE_POOL_SIZE,
 				MAXIMUM_POOL_SIZE,
@@ -82,19 +82,16 @@ public class ReportManager {
 	 * @param state
 	 */
 	public void handleState(Report report, int state) {
+		Message completeMessage = mHandler.obtainMessage(state, report);
 		switch (state) {
-			case LOAD_COMPLETE:
-				report.setEnabled(true);
-				Message completeMessage = mHandler.obtainMessage(state, report);
-				completeMessage.sendToTarget();
-				break;
-			case LOAD_FAILED:
-				report.setEnabled(false);
-				report.setDescription("Problem loading report ...");
-			default:
-				mHandler.obtainMessage(state, report).sendToTarget();
-				break;
+		case LOAD_COMPLETE:
+			report.setEnabled(true);
+			break;
+		case LOAD_FAILED:
+			report.setEnabled(false);
+			report.setDescription("Problem loading report");
 		}
+		completeMessage.sendToTarget();
 	}
 
 	public List<Report> getReports() {				
@@ -168,10 +165,6 @@ public class ReportManager {
 		mReports.add(report);
 	}
 	
-	public List<Report> getReportList() {
-		return mReports;
-	}
-
 	public File getDiceRoot() {
 		return diceRoot;
 	}
