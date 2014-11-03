@@ -2,13 +2,10 @@ package mil.nga.dice.gridview;
 
 import java.util.List;
 
-import mil.nga.dice.R.id;
-import mil.nga.dice.R.layout;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
 import mil.nga.dice.report.ReportManager;
 import mil.nga.dice.R;
-import android.app.Activity;
 import android.app.Fragment;
 import android.content.Intent;
 import android.os.Bundle;

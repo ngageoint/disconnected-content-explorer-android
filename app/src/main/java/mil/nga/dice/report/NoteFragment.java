@@ -1,7 +1,6 @@
 package mil.nga.dice.report;
 
 import mil.nga.dice.R;
-import mil.nga.dice.R.layout;
 import android.app.Fragment;
 import android.os.Bundle;
 import android.view.LayoutInflater;

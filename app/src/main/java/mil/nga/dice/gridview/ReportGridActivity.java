@@ -3,9 +3,6 @@ package mil.nga.dice.gridview;
 import java.util.ArrayList;
 
 import mil.nga.dice.R;
-import mil.nga.dice.R.id;
-import mil.nga.dice.R.layout;
-import mil.nga.dice.R.menu;
 import mil.nga.dice.listview.ReportListActivity;
 import mil.nga.dice.map.ReportMapActivity;
 import mil.nga.dice.report.Report;

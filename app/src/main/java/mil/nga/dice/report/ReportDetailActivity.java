@@ -1,10 +1,6 @@
 package mil.nga.dice.report;
 
 import mil.nga.dice.R;
-import mil.nga.dice.R.id;
-import mil.nga.dice.R.layout;
-import mil.nga.dice.R.menu;
-import mil.nga.dice.listview.ReportListActivity;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
