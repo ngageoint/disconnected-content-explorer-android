@@ -146,6 +146,11 @@ public class Report implements Parcelable {
 		else
 			parcel.writeString("");
 
+		if (id != null)
+			parcel.writeString(id);
+		else
+			parcel.writeString("");
+
 		if (lat != null)
 			parcel.writeDouble(lat);
 		else
@@ -185,6 +190,7 @@ public class Report implements Parcelable {
 			report.description = source.readString();
 			report.enabled = source.readByte() != 0;
 			report.error = source.readString();
+			report.id = source.readString();
 			report.lat = source.readDouble();
 			report.lon = source.readDouble();
 			Object value;
