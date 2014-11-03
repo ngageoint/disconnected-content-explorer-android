@@ -4,14 +4,10 @@ import java.io.File;
 import java.util.ArrayList;
 
 import mil.nga.dice.R;
-import mil.nga.dice.R.id;
-import mil.nga.dice.R.layout;
-import mil.nga.dice.R.menu;
 import mil.nga.dice.gridview.ReportGridActivity;
 import mil.nga.dice.map.ReportMapActivity;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
-import mil.nga.dice.report.ReportDetailFragment;
 import mil.nga.dice.report.ReportManager;
 import android.app.Activity;
 import android.content.Intent;
@@ -69,7 +65,7 @@ public class ReportListActivity extends Activity implements ReportListFragment.C
 			startActivity(detailIntent);
 		}
 		else if (report.getFileExtension().equalsIgnoreCase("pdf")) {
-			File file = new File(report.getPath());
+			File file = report.getPath();
 			Intent intent = new Intent(Intent.ACTION_VIEW);
 			intent.setDataAndType(Uri.fromFile(file), "application/pdf");
 			intent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);

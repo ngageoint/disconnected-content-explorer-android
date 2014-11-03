@@ -1,20 +1,14 @@
 package mil.nga.dice.report;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
 
+import android.annotation.TargetApi;
+import android.os.Build;
 import mil.nga.dice.R;
-import mil.nga.dice.R.id;
-import mil.nga.dice.R.layout;
-import mil.nga.dice.listview.ReportListActivity;
 import android.annotation.SuppressLint;
 import android.app.Fragment;
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
@@ -50,7 +44,6 @@ public class ReportDetailFragment extends Fragment {
 		}
 	}
 
-	
 	@SuppressLint("SetJavaScriptEnabled")
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -58,13 +51,21 @@ public class ReportDetailFragment extends Fragment {
 		if (mReport == null) {
 			return rootView;
 		}
-		File reportFile = new File(mReport.getPath() + "/index.html");
+		File reportFile = new File(mReport.getPath(), "index.html");
 		if (reportFile.canRead() && reportFile.length() > 0) {
 			WebView webView = (WebView) rootView.findViewById(R.id.report_detail);
 			webView.getSettings().setJavaScriptEnabled(true);
 			webView.loadUrl(reportFile.toURI().toASCIIString());
+			// TODO: block network?
+			// webView.getSettings().getBlockNetworkLoads();
+			enableFileAjax(webView);
 		}
 		return rootView;
+	}
+
+	@TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+	private void enableFileAjax(WebView webView) {
+		webView.getSettings().setAllowFileAccessFromFileURLs(true);
 	}
 
 }

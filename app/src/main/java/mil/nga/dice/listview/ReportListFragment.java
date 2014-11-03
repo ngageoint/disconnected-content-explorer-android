@@ -3,13 +3,10 @@ package mil.nga.dice.listview;
 import java.util.List;
 
 import mil.nga.dice.report.Report;
-import mil.nga.dice.report.ReportDetailFragment;
 import mil.nga.dice.report.ReportManager;
 import android.app.Activity;
 import android.app.ListFragment;
 import android.os.Bundle;
-import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v4.widget.SwipeRefreshLayout.OnRefreshListener;
 import android.view.View;
 import android.widget.ListView;
 
@@ -73,7 +70,6 @@ public class ReportListFragment extends ListFragment {
 		super.onCreate(savedInstanceState);
 		mReportManager = ReportManager.getInstance();
 		mReportManager.setReportListFragment(this);
-		mReportManager.loadReports();
 		mReports = mReportManager.getReports();
 		mReportsAdapter = new CustomList(getActivity(), mReports);
 		
@@ -137,7 +133,7 @@ public class ReportListFragment extends ListFragment {
 
 		// Notify the active callbacks interface (the activity, if the
 		// fragment is attached to one) that an item has been selected.
-		mCallbacks.onItemSelected(mReportManager.getReportList().get(position));
+		mCallbacks.onItemSelected(mReportManager.getReports().get(position));
 	}
 
 	

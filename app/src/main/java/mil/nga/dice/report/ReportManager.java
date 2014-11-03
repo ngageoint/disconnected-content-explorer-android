@@ -1,88 +1,137 @@
 package mil.nga.dice.report;
 
-import android.os.Environment;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.Message;
+import android.app.Application;
+import android.os.*;
+import android.os.Process;
 import mil.nga.dice.listview.ReportListFragment;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 // TODO: change to be a service?
 public class ReportManager {
+
+	public static class Configuration {
+		private final Application host;
+		private boolean ready = false;
+		private Configuration(Application x) {
+			host = x;
+			if (host == null) {
+				throw new IllegalArgumentException("host application cannot be null");
+			}
+		}
+		private boolean isReady() {
+			return ready;
+		}
+		public Configuration reportsDir(File x) {
+			instance.reportsDir = x;
+			return this;
+		}
+		public ReportManager finish() {
+			ready = true;
+			return getInstance();
+		}
+	}
+
+	public static synchronized Configuration initialize(Application host) {
+		if (config != null) {
+			throw new IllegalStateException("already initialized");
+		}
+		return config = new Configuration(host);
+	}
+
+	public static ReportManager getInstance() {
+		if (config == null || !config.isReady()) {
+			throw new IllegalStateException(instance.getClass().getName() + " has not been properly initialized");
+		}
+		return instance;
+	}
+
+	private static class BackgroundRunnable implements Runnable {
+		private final Runnable target;
+		BackgroundRunnable(Runnable target){
+			this.target = target;
+		}
+		public void run() {
+			Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
+			target.run();
+		}
+	}
+
+	private static Configuration config;
+
 	// Time units, and thread count for threading
 	private static final int KEEP_ALIVE_TIME = 1;
 	private static final TimeUnit KEEP_ALIVE_TIME_UNIT = TimeUnit.SECONDS;
-	private static final int CORE_POOL_SIZE = 8;
-	private static final int MAXIMUM_POOL_SIZE = 8;
+	private static final int CORE_POOL_SIZE = 5;
+	private static final int MAXIMUM_POOL_SIZE = 5;
 
-	private static final ReportManager sInstance = new ReportManager();
+	private static final ReportManager instance = new ReportManager();
 
 	// status indicators
 	static final int LOAD_FAILED = -1;
 	static final int LOAD_COMPLETE = 1;
 
-	// A work queue, a pool to work from, and a way back to the UI thread
-	private final ThreadPoolExecutor mReportLoadingPool;
-	// The list of reports
-	private final List <Report> mReports = new ArrayList<>();
-	private final Handler mHandler;
 
+	private File reportsDir = new File(Environment.getExternalStorageDirectory(), "DICE");
+	private final List <Report> reports = new ArrayList<>();
+
+	// A work queue, a pool to work from, and a way back to the UI thread
+	private ThreadPoolExecutor reportProcessor;
+	private Handler handler;
 	// TODO: referencing a ui class here smells
-	private ReportListFragment mReportListFragment;
-	// TODO: use app data directory instead of storage root?
-	private File root = Environment.getExternalStorageDirectory();
-	private File diceRoot = new File(root.getPath(), "DICE");
+	private ReportListFragment reportListFragment;
 
 	private ReportManager() {
-		mReportLoadingPool = new ThreadPoolExecutor(
+		reportProcessor = new ThreadPoolExecutor(
 				CORE_POOL_SIZE,
 				MAXIMUM_POOL_SIZE,
 				KEEP_ALIVE_TIME,
 				KEEP_ALIVE_TIME_UNIT,
 				new LinkedBlockingQueue<Runnable>());
-		
-		/*
-		 * Create a new handler so we can talk back to the UI thread
-		 */
-		mHandler = new Handler(Looper.getMainLooper()) {
+		final ThreadFactory defaultThreadFactory = Executors.defaultThreadFactory();
+		reportProcessor.setThreadFactory(new ThreadFactory() {
+			@Override
+			public Thread newThread(Runnable r) {
+				return defaultThreadFactory.newThread(new BackgroundRunnable(r));
+			}
+		});
+
+		handler = new Handler(Looper.getMainLooper()) {
 			public void handleMessage(Message inputMessage) {
+				if (reportListFragment == null) {
+					return;
+				}
+
 				Report report = (Report) inputMessage.obj;
-				ArrayList<Report> tmpReports = new ArrayList<>(mReportListFragment.getReports());
-						
+				inputMessage.replyTo = null;
+				ArrayList<Report> tmpReports = new ArrayList<>(reportListFragment.getReports());
+
 				int listSize = tmpReports.size();
 				for (int i = 0; i < listSize; i++) {
-					if(tmpReports.get(i).getFilename().equals(report.getFilename())) {
+					if (tmpReports.get(i).getFileName().equals(report.getFileName())) {
 						tmpReports.set(i, report);
 					}
 				}
-				
-				mReportListFragment.setReportList(tmpReports);
-				mReportListFragment.refreshListAdapter();
+
+				reportListFragment.setReportList(tmpReports);
+				reportListFragment.refreshListAdapter();
 			}
 		};
 	}
 
-	/**
-	 * Returns the ReportManager object
-	 * @return The global ReportManager object
-	 */
-	public static ReportManager getInstance() {
-		return sInstance;
-	}
-	
+
+
 	/**
 	 * Handle sending messages based on the state of a report task.
 	 * @param report
 	 * @param state
 	 */
 	public void handleState(Report report, int state) {
-		Message completeMessage = mHandler.obtainMessage(state, report);
+		Message completeMessage = handler.obtainMessage(state, report);
 		switch (state) {
 		case LOAD_COMPLETE:
 			report.setEnabled(true);
@@ -90,51 +139,57 @@ public class ReportManager {
 		case LOAD_FAILED:
 			report.setEnabled(false);
 			report.setDescription("Problem loading report");
+			break;
 		}
 		completeMessage.sendToTarget();
 	}
 
+	/**
+	 * Return a read-only list of the processed reports.
+	 * @return
+	 */
 	public List<Report> getReports() {				
-		return mReports;
+		return Collections.unmodifiableList(reports);
 	}
 	
-	public void loadReports() {
-		mReports.clear();
-
-		if (!diceRoot.exists()) {
-			return;
+	public void processReports(File... reportFiles) {
+		if (!reportsDir.isDirectory() && !reportsDir.mkdirs()) {
+			throw new IllegalStateException(
+					"report directory path is not a directory and could not be created: " +
+							reportsDir.getAbsolutePath());
 		}
-
+		if (reportFiles == null) {
+			throw new IllegalArgumentException("report path is null");
+		}
 		/*
 		 * TODO: use File objects for report files and retain the full path on the Report object and
-		 * eliminate the need for client classes to call getDiceRoot()
+		 * eliminate the need for client classes to call getReportsDir()
 		 */
-		String listOfFiles[] = diceRoot.list();
+		for (File reportFile : reportFiles) {
+			String fileName = reportFile.getName();
+			String extension = fileName.substring(fileName.lastIndexOf(".") + 1);
+			String simpleName = fileName.substring(0, fileName.lastIndexOf("."));
 
-		for (String filename : listOfFiles) {
-			String extension = filename.substring(filename.lastIndexOf(".") + 1);
 			Report report = new Report();
-			report.setFilename(filename);
-			report.setDescription("Unzipping report...");
-			report.setFileExtension(extension);
+			report.setSourceFile(reportFile);
+			report.setTitle(simpleName);
+			report.setDescription("Processing report ...");
 			report.setEnabled(false);
 
 			if (extension.equals("zip")) {
-				String unzipDirName = filename.substring(0, filename.lastIndexOf("."));
-				report.setTitle(unzipDirName);
-				File unzipDir = new File(diceRoot, unzipDirName);
-				report.setPath(unzipDir.getAbsolutePath());
-				this.addReport(report);
+				File unzipDir = new File(reportsDir, simpleName);
+				report.setPath(unzipDir);
+				addReport(report);
 				// TODO: need to refactor this to use the threadpool properly
 				startUnzip(report);
 			}
 			else if (extension.equals("pdf")) {
 			 	// TODO: need to look into more PDF options on android
-				report.setTitle(filename);
 				report.setEnabled(true);
 				report.setDescription("");
-				report.setPath(diceRoot.getPath() + File.separator + filename);
-				this.addReport(report);
+				report.setPath(new File(reportsDir.getPath(), report.getFileName()));
+				// TODO: copy pdf to new location
+				addReport(report);
 			}
 			else if (extension.equalsIgnoreCase("docx")) {
 				// TODO: word files
@@ -149,27 +204,28 @@ public class ReportManager {
 	}
 
 	private void startUnzip(Report report) {
-		mReportLoadingPool.execute(new ReportUnzipRunnable(report));
+		reportProcessor.execute(new ReportUnzipRunnable(report));
 	}
 	
 	public Report getReportWithID(String id) {
-		for (Report r : mReports) {
+		for (Report r : reports) {
 			if (r.getId() != null && r.getId().equals(id)) {
 				return r;
 			}
 		}
 		return null;
 	}
-	
+
 	private void addReport(Report report) {
-		mReports.add(report);
+		reports.add(report);
+		// TODO: send broadcast message to ui components
 	}
 	
-	public File getDiceRoot() {
-		return diceRoot;
+	public File getReportsDir() {
+		return reportsDir;
 	}
 
 	public void setReportListFragment(ReportListFragment reportListFragment) {
-		mReportListFragment = reportListFragment;
+		this.reportListFragment = reportListFragment;
 	}
 }

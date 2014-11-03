@@ -1,62 +1,40 @@
 package mil.nga.dice.report;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.HashMap;
-
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.util.Log;
+
+import java.io.File;
+import java.io.FileDescriptor;
 
 public class Report implements Parcelable {
+	private File sourceFile;
+	private File path;
 	private String title;
 	private String description;
 	private String thumbnail;
-	private String filename;
-	private String fileExtension;
-	private String path;
 	private String id;
 	private String error;
 	private Double lat;
 	private Double lon;
-	private Boolean enabled;
-	
-	public Report() {
-		super();
-	}
-	
-	public Report (String title) {
-		this.title = title;
-		this.description = null;
-		this.thumbnail = null;
-		this.filename = null;
-		this.fileExtension = null;
-		this.path = null;
-		this.id = null;
-		this.lat = null;
-		this.lon = null;
-		this.enabled = false;
-		this.error = null;
-	}
-	
-	public Report (String title, String classification, String thumbnail, String filename, String fileExtension, String path, String id, Double lat, Double lon, Boolean enabled, String error) {
-		this.title = title;
-		this.description = classification;
-		this.thumbnail = thumbnail;
-		this.filename = filename;
-		this.fileExtension = fileExtension;
-		this.path = path;
-		this.id = id;
-		this.lat = lat;
-		this.lon = lon;
-		this.enabled = enabled;
-		this.error = error;
-	}
+	private Boolean enabled = false;
+
+
+	public Report() {}
+
 
 	public String toString() {
 		return this.title;
 	}
-	
+
+	public File getSourceFile() {
+		return sourceFile;
+	}
+
+	public void setSourceFile(File x) {
+		sourceFile = x;
+	}
+
 	public String getTitle() {
 		return title;
 	}
@@ -81,28 +59,29 @@ public class Report implements Parcelable {
 		this.thumbnail = thumbnail;
 	}
 
-	public String getFilename() {
-		return filename;
-	}
-	
-	public void setFilename(String filename) {
-		this.filename = filename;
+	public String getFileName() {
+		return sourceFile.getName();
 	}
 	
 	public String getFileExtension() {
-		return fileExtension;
+		String fileName = getFileName();
+		int lastDot = fileName.lastIndexOf(".");
+		if (lastDot > -1 && lastDot < fileName.length() - 1) {
+			return fileName.substring(lastDot + 1);
+		}
+		return null;
 	}
 
-	public void setFileExtension(String fileExtension) {
-		this.fileExtension = fileExtension;
-	}
-	
-	public String getPath() {
+	/**
+	 * The absolute path to the report content.
+	 * @return
+	 */
+	public File getPath() {
 		return path;
 	}
 	
-	public void setPath(String path) {
-		this.path = path;
+	public void setPath(File x) {
+		path = x;
 	}
 	
 	public String getId() {
@@ -152,63 +131,73 @@ public class Report implements Parcelable {
 
 	@Override
 	public void writeToParcel(Parcel parcel, int flags) {
-		if (title != null) 
-			parcel.writeString(title);
-		else
-			parcel.writeString("");
-		if (description != null) 
+		if (description != null)
 			parcel.writeString(description);
 		else
 			parcel.writeString("");
-		if (thumbnail != null) 
-			parcel.writeString(thumbnail);
-		else
-			parcel.writeString("");
-		if (filename != null) 
-			parcel.writeString(filename);
-		else
-			parcel.writeString("");
-		if (fileExtension != null) 
-			parcel.writeString(fileExtension);
-		else
-			parcel.writeString("");
-		if (path != null) 
-			parcel.writeString(path);
-		else
-			parcel.writeString("");
-		if (error != null) 
-			parcel.writeString(error);
-		else
-			parcel.writeString("");
-		if (lat != null)
-			parcel.writeDouble(lat);
-		else
-			parcel.writeDouble(0.0);
-		if (lon != null)
-			parcel.writeDouble(lon);
-		else
-			parcel.writeDouble(0.0);
+
 		if (enabled != null)
 			parcel.writeByte((byte) (enabled ? 1 : 0));
 		else
 			parcel.writeByte((byte)0);
+
+		if (error != null)
+			parcel.writeString(error);
+		else
+			parcel.writeString("");
+
+		if (lat != null)
+			parcel.writeDouble(lat);
+		else
+			parcel.writeDouble(0.0);
+
+		if (lon != null)
+			parcel.writeDouble(lon);
+		else
+			parcel.writeDouble(0.0);
+
+		if (path != null)
+			parcel.writeString(path.getAbsolutePath());
+		else
+			parcel.writeString("");
+
+		if (sourceFile != null)
+			parcel.writeString(sourceFile.getAbsolutePath());
+		else
+			parcel.writeString("");
+
+		if (thumbnail != null)
+			parcel.writeString(thumbnail);
+		else
+			parcel.writeString("");
+
+		if (title != null)
+			parcel.writeString(title);
+		else
+			parcel.writeString("");
+
 	}
-	
-	
+
 	public static final Parcelable.Creator<Report> CREATOR = new Creator<Report> () {
 		@Override
 		public Report createFromParcel(Parcel source) {
 			Report report = new Report();
-			report.title = source.readString();
 			report.description = source.readString();
-			report.thumbnail = source.readString();
-			report.filename = source.readString();
-			report.fileExtension = source.readString();
-			report.path = source.readString();
+			report.enabled = source.readByte() != 0;
 			report.error = source.readString();
 			report.lat = source.readDouble();
 			report.lon = source.readDouble();
-			report.enabled = source.readByte() != 0;
+			Object value;
+			value = source.readString();
+			if (!value.toString().isEmpty()) {
+				report.path = new File(value.toString());
+			}
+			value = source.readString();
+			if (!value.toString().isEmpty()) {
+				report.sourceFile = new File(value.toString());
+			}
+			report.thumbnail = source.readString();
+			report.title = source.readString();
 			return report;
 		}
 		
@@ -216,5 +205,6 @@ public class Report implements Parcelable {
 		public Report[] newArray(int size) {
 			return new Report[size];
 		}
-	};	
+	};
+
 }
