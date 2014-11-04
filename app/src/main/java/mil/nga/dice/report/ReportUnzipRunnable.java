@@ -1,19 +1,15 @@
 package mil.nga.dice.report;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import android.util.Log;
+import org.json.JSONObject;
+
+import java.io.*;
+import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-
-import org.json.JSONObject;
-
-import android.util.Log;
 
 /**
  * This runnable unzips a DICE report.
@@ -95,9 +91,10 @@ public class ReportUnzipRunnable implements Runnable {
 
 		reportManager.handleState(report, ReportManager.LOAD_COMPLETE);
 	}
-	
-	
+
+
 	private void unzip(File zipFile, File toDir) throws IOException {
+		byte[] entryBuffer = new byte[BUFFER_SIZE];
 		ZipInputStream zipIn = new ZipInputStream(new FileInputStream(zipFile));
 		try {
 			ZipEntry entry = zipIn.getNextEntry();
@@ -107,7 +104,7 @@ public class ReportUnzipRunnable implements Runnable {
 					entryFile.mkdir();
 				}
 				else {
-					extractEntryFile(zipIn, entryFile);
+					extractEntryFile(zipIn, entryFile, entryBuffer);
 				}
 				zipIn.closeEntry();
 				entry = zipIn.getNextEntry();
@@ -119,13 +116,12 @@ public class ReportUnzipRunnable implements Runnable {
 	}
 	
 	
-	private void extractEntryFile(ZipInputStream zipIn, File toFile) throws IOException {
-		BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(toFile));
-		byte[] bytesIn = new byte[BUFFER_SIZE];
+	private void extractEntryFile(ZipInputStream zipIn, File toFile, byte[] entryBuffer) throws IOException {
+		OutputStream entryOut = new FileOutputStream(toFile);
 		int read;
-		while ((read = zipIn.read(bytesIn)) != -1) {
-			bos.write(bytesIn, 0, read);
+		while ((read = zipIn.read(entryBuffer)) != -1) {
+			entryOut.write(entryBuffer, 0, read);
 		}
-		bos.close();
+		entryOut.close();
 	}
 }
