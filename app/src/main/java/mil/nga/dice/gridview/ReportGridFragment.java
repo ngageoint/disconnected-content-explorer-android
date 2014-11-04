@@ -1,40 +1,40 @@
 package mil.nga.dice.gridview;
 
-import java.util.List;
-
-import mil.nga.dice.report.Report;
-import mil.nga.dice.report.ReportDetailActivity;
-import mil.nga.dice.report.ReportManager;
-import mil.nga.dice.R;
 import android.app.Fragment;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.GridView;
 import android.widget.AdapterView;
+import android.widget.GridView;
+import mil.nga.dice.R;
+import mil.nga.dice.report.Report;
+import mil.nga.dice.report.ReportDetailActivity;
+import mil.nga.dice.report.ReportManager;
 
 public class ReportGridFragment extends Fragment implements AdapterView.OnItemClickListener {
-	
-	private List<Report> mReports;
-	private CustomGrid mReportsAdapter;
-	ReportManager mReportManager;
-	
+
 	public static final String ARG_REPORTS = "reports";
-	private static final String TAG = "ReportGridFragment";
-	
-	
-	public ReportGridFragment() {}
-	
+
+	private CustomGrid mReportsAdapter;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		mReportManager = ReportManager.getInstance();
-		mReports = mReportManager.getReports();
-		mReportsAdapter = new CustomGrid(getActivity(), mReports);
+		mReportsAdapter = new CustomGrid(getActivity(), ReportManager.getInstance().getReports());
+		LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getActivity());
+		bm.registerReceiver(new BroadcastReceiver() {
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				mReportsAdapter.notifyDataSetChanged();
+			}
+		}, new IntentFilter(ReportManager.INTENT_UPDATE_REPORT_LIST));
 	}
 	
 	
@@ -50,9 +50,7 @@ public class ReportGridFragment extends Fragment implements AdapterView.OnItemCl
 
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-		Log.i(TAG, "Grid item clicked at position " + position);
-		
-		Report report = mReports.get(position);
+		Report report = (Report) mReportsAdapter.getItem(position);
 		if (report.isEnabled()) {
 			Intent detailIntent = new Intent(getActivity(), ReportDetailActivity.class);
 			detailIntent.putExtra("report", report);
