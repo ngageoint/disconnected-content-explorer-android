@@ -18,14 +18,12 @@ import android.widget.TextView;
 
 public class CustomGrid extends BaseAdapter {
 
-	private final Activity mActivity;
 	private List<Report> mReports;
 	private static LayoutInflater inflater = null;
 	
 	public CustomGrid(Activity activity, List<Report> reports) {
-		this.mActivity = activity;
 		this.mReports = reports;
-		inflater = (LayoutInflater)mActivity.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+		inflater = (LayoutInflater) activity.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 	}
 	
 	
