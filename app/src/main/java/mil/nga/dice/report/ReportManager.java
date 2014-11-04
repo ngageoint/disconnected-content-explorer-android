@@ -1,9 +1,10 @@
 package mil.nga.dice.report;
 
 import android.app.Application;
-import android.os.*;
+import android.content.Intent;
+import android.os.Handler;
 import android.os.Process;
-import mil.nga.dice.listview.ReportListFragment;
+import android.support.v4.content.LocalBroadcastManager;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -14,14 +15,16 @@ import java.util.concurrent.*;
 // TODO: change to be a service?
 public class ReportManager {
 
+	public static final String INTENT_UPDATE_REPORT_LIST = ReportManager.class.getName() + ".UPDATE_REPORT_LIST";
+
 	public static class Configuration {
-		private final Application host;
 		private boolean ready = false;
-		private Configuration(Application x) {
-			host = x;
+		private Configuration(Application host) {
 			if (host == null) {
 				throw new IllegalArgumentException("host application cannot be null");
 			}
+			instance.app = host;
+			instance.handler = new Handler(host.getMainLooper());
 		}
 		private boolean isReady() {
 			return ready;
@@ -31,7 +34,7 @@ public class ReportManager {
 			return this;
 		}
 		public ReportManager finish() {
-			ready = true;
+			ready = instance.reportsDir != null;
 			return getInstance();
 		}
 	}
@@ -63,7 +66,6 @@ public class ReportManager {
 
 	private static Configuration config;
 
-	// Time units, and thread count for threading
 	private static final int KEEP_ALIVE_TIME = 1;
 	private static final TimeUnit KEEP_ALIVE_TIME_UNIT = TimeUnit.SECONDS;
 	private static final int CORE_POOL_SIZE = 5;
@@ -71,19 +73,17 @@ public class ReportManager {
 
 	private static final ReportManager instance = new ReportManager();
 
-	// status indicators
 	static final int LOAD_FAILED = -1;
 	static final int LOAD_COMPLETE = 1;
 
 
-	private File reportsDir = new File(Environment.getExternalStorageDirectory(), "DICE");
-	private final List <Report> reports = new ArrayList<>();
+	private final List<Report> reports = new ArrayList<>();
+	private final List<Report> reportsView = Collections.unmodifiableList(reports);
 
-	// A work queue, a pool to work from, and a way back to the UI thread
+	private Application app;
+	private File reportsDir;
 	private ThreadPoolExecutor reportProcessor;
 	private Handler handler;
-	// TODO: referencing a ui class here smells
-	private ReportListFragment reportListFragment;
 
 	private ReportManager() {
 		reportProcessor = new ThreadPoolExecutor(
@@ -99,30 +99,7 @@ public class ReportManager {
 				return defaultThreadFactory.newThread(new BackgroundRunnable(r));
 			}
 		});
-
-		handler = new Handler(Looper.getMainLooper()) {
-			public void handleMessage(Message inputMessage) {
-				if (reportListFragment == null) {
-					return;
-				}
-
-				Report report = (Report) inputMessage.obj;
-				inputMessage.replyTo = null;
-				ArrayList<Report> tmpReports = new ArrayList<>(reportListFragment.getReports());
-
-				int listSize = tmpReports.size();
-				for (int i = 0; i < listSize; i++) {
-					if (tmpReports.get(i).getFileName().equals(report.getFileName())) {
-						tmpReports.set(i, report);
-					}
-				}
-
-				reportListFragment.setReportList(tmpReports);
-				reportListFragment.refreshListAdapter();
-			}
-		};
 	}
-
 
 
 	/**
@@ -131,7 +108,6 @@ public class ReportManager {
 	 * @param state
 	 */
 	public void handleState(Report report, int state) {
-		Message completeMessage = handler.obtainMessage(state, report);
 		switch (state) {
 		case LOAD_COMPLETE:
 			report.setEnabled(true);
@@ -141,15 +117,15 @@ public class ReportManager {
 			report.setDescription("Problem loading report");
 			break;
 		}
-		completeMessage.sendToTarget();
+		LocalBroadcastManager.getInstance(app).sendBroadcast(new Intent(INTENT_UPDATE_REPORT_LIST));
 	}
 
 	/**
-	 * Return a read-only list of the processed reports.
+	 * Return a live, read-only list of the processed reports.
 	 * @return
 	 */
 	public List<Report> getReports() {				
-		return Collections.unmodifiableList(reports);
+		return reportsView;
 	}
 	
 	public void processReports(File... reportFiles) {
@@ -161,10 +137,6 @@ public class ReportManager {
 		if (reportFiles == null) {
 			throw new IllegalArgumentException("report file is null");
 		}
-		/*
-		 * TODO: use File objects for report files and retain the full path on the Report object and
-		 * eliminate the need for client classes to call getReportsDir()
-		 */
 		for (File reportFile : reportFiles) {
 			String fileName = reportFile.getName();
 			String extension = fileName.substring(fileName.lastIndexOf(".") + 1);
@@ -216,16 +188,24 @@ public class ReportManager {
 		return null;
 	}
 
+	private class AddReportOnUIThread implements Runnable {
+		private final Report report;
+		private AddReportOnUIThread(Report report) {
+			this.report = report;
+		}
+		@Override
+		public void run() {
+			reports.add(report);
+			LocalBroadcastManager.getInstance(app).sendBroadcastSync(new Intent(INTENT_UPDATE_REPORT_LIST));
+		}
+	}
+
 	private void addReport(Report report) {
-		reports.add(report);
-		// TODO: send broadcast message to ui components
+		handler.post(new AddReportOnUIThread(report));
 	}
 	
 	public File getReportsDir() {
 		return reportsDir;
 	}
 
-	public void setReportListFragment(ReportListFragment reportListFragment) {
-		this.reportListFragment = reportListFragment;
-	}
 }
