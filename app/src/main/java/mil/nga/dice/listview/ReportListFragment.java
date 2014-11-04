@@ -106,7 +106,7 @@ public class ReportListFragment extends ListFragment {
 
 		mCallbacks = (Callbacks) activity;
 	}
-	
+
 
 	@Override
 	public void onDetach() {

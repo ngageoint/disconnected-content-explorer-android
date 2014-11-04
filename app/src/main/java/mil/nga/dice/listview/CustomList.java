@@ -62,13 +62,13 @@ public class CustomList extends BaseAdapter {
 		if (!report.isEnabled()) {
 			title.setTextColor(Color.rgb(150,150,150));
 			classification.setTextColor(Color.rgb(150,150,150));
-		} else {
+		}
+		else {
 			title.setTextColor(Color.rgb(0,0,0));
 			classification.setTextColor(Color.rgb(0,0,0));
 		}
-		
-		
-		File image = new File(report.getPath() + "/" + report.getThumbnail());
+
+		File image = new File(report.getPath(), report.getThumbnail());
 		if (image.exists()) {
 			Bitmap bitmap = BitmapFactory.decodeFile(image.getAbsolutePath());
 			thumbnail.setImageBitmap(bitmap);
