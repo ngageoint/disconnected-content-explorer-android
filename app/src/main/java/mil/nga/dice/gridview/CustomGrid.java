@@ -60,13 +60,15 @@ public class CustomGrid extends BaseAdapter {
 
 		Report report = mReports.get(position);
 		title.setText(report.getTitle());
-		
-		File image = new File(report.getPath() + "/" + report.getThumbnail());
-		if (image.exists()) {
-			Bitmap bitmap = BitmapFactory.decodeFile(image.getAbsolutePath());
-			tileThumbnail.setImageBitmap(bitmap);
+
+		if (report.getThumbnail() != null) {
+			File image = new File(report.getPath(), report.getThumbnail());
+			if (image.exists()) {
+				Bitmap bitmap = BitmapFactory.decodeFile(image.getAbsolutePath());
+				tileThumbnail.setImageBitmap(bitmap);
+			}
 		}
-		
+
 		return view;
 	}
 }

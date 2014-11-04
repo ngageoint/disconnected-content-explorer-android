@@ -68,10 +68,12 @@ public class CustomList extends BaseAdapter {
 			classification.setTextColor(Color.rgb(0,0,0));
 		}
 
-		File image = new File(report.getPath(), report.getThumbnail());
-		if (image.exists()) {
-			Bitmap bitmap = BitmapFactory.decodeFile(image.getAbsolutePath());
-			thumbnail.setImageBitmap(bitmap);
+		if (report.getThumbnail() != null) {
+			File image = new File(report.getPath(), report.getThumbnail());
+			if (image.exists()) {
+				Bitmap bitmap = BitmapFactory.decodeFile(image.getAbsolutePath());
+				thumbnail.setImageBitmap(bitmap);
+			}
 		}
 		
 		view.setEnabled(report.isEnabled());
