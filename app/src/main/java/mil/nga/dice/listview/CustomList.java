@@ -74,6 +74,9 @@ public class CustomList extends BaseAdapter {
 				Bitmap bitmap = BitmapFactory.decodeFile(image.getAbsolutePath());
 				thumbnail.setImageBitmap(bitmap);
 			}
+			else {
+				thumbnail.setImageBitmap(null);
+			}
 		}
 		
 		view.setEnabled(report.isEnabled());

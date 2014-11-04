@@ -51,12 +51,13 @@ public class CustomGrid extends BaseAdapter {
 		
 		if (convertView != null) {
 			 view = convertView;
-		} else {
+		}
+		else {
 			view = inflater.inflate(R.layout.grid_item, null, false);
 		}
 		
-		ImageView tileThumbnail = (ImageView)view.findViewById(R.id.tileThumbnail);
-		TextView title = (TextView)view.findViewById(R.id.title);
+		ImageView tileThumbnail = (ImageView) view.findViewById(R.id.tileThumbnail);
+		TextView title = (TextView) view.findViewById(R.id.title);
 
 		Report report = mReports.get(position);
 		title.setText(report.getTitle());
@@ -67,6 +68,9 @@ public class CustomGrid extends BaseAdapter {
 				Bitmap bitmap = BitmapFactory.decodeFile(image.getAbsolutePath());
 				tileThumbnail.setImageBitmap(bitmap);
 			}
+		}
+		else {
+			tileThumbnail.setImageBitmap(null);
 		}
 
 		return view;
