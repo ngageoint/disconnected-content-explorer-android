@@ -17,7 +17,7 @@ public class Report implements Parcelable {
 	private String error;
 	private Double lat;
 	private Double lon;
-	private Boolean enabled = false;
+	private boolean enabled = false;
 
 
 	public Report() {}
@@ -27,6 +27,10 @@ public class Report implements Parcelable {
 		return this.title;
 	}
 
+	/**
+	 * Return the absolute path to the original file from which this report was created, e.g., a downloaded zip file.
+	 * @return
+	 */
 	public File getSourceFile() {
 		return sourceFile;
 	}
@@ -73,7 +77,7 @@ public class Report implements Parcelable {
 	}
 
 	/**
-	 * The absolute path to the report content.
+	 * Return the absolute path to the report content.
 	 * @return
 	 */
 	public File getPath() {
@@ -120,7 +124,7 @@ public class Report implements Parcelable {
 		return enabled;
 	}
 	
-	public void setEnabled (Boolean enabled) {
+	public void setEnabled (boolean enabled) {
 		this.enabled = enabled;
 	}
 
@@ -134,72 +138,62 @@ public class Report implements Parcelable {
 		if (description != null)
 			parcel.writeString(description);
 		else
-			parcel.writeString("");
+			parcel.writeString(null);
 
-		if (enabled != null)
-			parcel.writeByte((byte) (enabled ? 1 : 0));
-		else
-			parcel.writeByte((byte)0);
+		parcel.writeByte((byte) (enabled ? 1 : 0));
 
 		if (error != null)
 			parcel.writeString(error);
 		else
-			parcel.writeString("");
+			parcel.writeString(null);
 
 		if (id != null)
 			parcel.writeString(id);
 		else
-			parcel.writeString("");
+			parcel.writeString(null);
 
-		if (lat != null)
-			parcel.writeDouble(lat);
-		else
-			parcel.writeDouble(0.0);
+		parcel.writeValue(lat);
 
-		if (lon != null)
-			parcel.writeDouble(lon);
-		else
-			parcel.writeDouble(0.0);
+		parcel.writeValue(lon);
 
 		if (path != null)
 			parcel.writeString(path.getAbsolutePath());
 		else
-			parcel.writeString("");
+			parcel.writeString(null);
 
 		if (sourceFile != null)
 			parcel.writeString(sourceFile.getAbsolutePath());
 		else
-			parcel.writeString("");
+			parcel.writeString(null);
 
 		if (thumbnail != null)
 			parcel.writeString(thumbnail);
 		else
-			parcel.writeString("");
+			parcel.writeValue(null);
 
 		if (title != null)
 			parcel.writeString(title);
 		else
-			parcel.writeString("");
-
+			parcel.writeValue(null);
 	}
 
 	public static final Parcelable.Creator<Report> CREATOR = new Creator<Report> () {
 		@Override
 		public Report createFromParcel(Parcel source) {
 			Report report = new Report();
+			Object value;
 			report.description = source.readString();
 			report.enabled = source.readByte() != 0;
 			report.error = source.readString();
 			report.id = source.readString();
-			report.lat = source.readDouble();
-			report.lon = source.readDouble();
-			Object value;
+			report.lat = (Double) source.readValue(null);
+			report.lon = (Double) source.readValue(null);
 			value = source.readString();
-			if (!value.toString().isEmpty()) {
+			if (value != null && !value.toString().isEmpty()) {
 				report.path = new File(value.toString());
 			}
 			value = source.readString();
-			if (!value.toString().isEmpty()) {
+			if (value != null && !value.toString().isEmpty()) {
 				report.sourceFile = new File(value.toString());
 			}
 			report.thumbnail = source.readString();

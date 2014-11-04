@@ -1,6 +1,5 @@
 package mil.nga.dice.report.tests;
 
-import android.app.Application;
 import android.os.Environment;
 import android.os.Parcel;
 import android.test.suitebuilder.annotation.MediumTest;
@@ -49,7 +48,33 @@ public class ReportTest extends TestCase {
 
     @MediumTest
     public void testParcelsNullValues() {
-//        fail();
+        Report r = new Report();
+        r.setDescription(null);
+        r.setEnabled(false);
+        r.setError(null);
+        r.setId(null);
+        r.setLat(null);
+        r.setLon(null);
+        r.setPath(null);
+        r.setSourceFile(null);
+        r.setThumbnail(null);
+        r.setTitle(null);
+
+        Parcel parcel = Parcel.obtain();
+        r.writeToParcel(parcel, 0);
+        parcel.setDataPosition(0);
+        Report fromParcel = Report.CREATOR.createFromParcel(parcel);
+
+        assertNull(fromParcel.getDescription());
+        assertFalse(fromParcel.isEnabled());
+        assertNull(fromParcel.getError());
+        assertNull(fromParcel.getId());
+        assertNull(fromParcel.getLat());
+        assertNull(fromParcel.getLon());
+        assertNull(fromParcel.getPath());
+        assertNull(fromParcel.getSourceFile());
+        assertNull(fromParcel.getThumbnail());
+        assertNull(fromParcel.getTitle());
     }
 
 }
