@@ -43,7 +43,7 @@ public class ReportUnzipRunnable implements Runnable {
 		try {
 			Log.i(tag, "unzipping report package " + report.getSourceFile());
 			if (!reportContentRoot.exists()) {
-				unzip(report.getSourceFile(), ReportManager.getInstance().getReportsDir());
+				unzip(report.getSourceFile(), reportManager.getReportsDir());
 			}
 
 			// handle the metadata.json file to fancy up the report object for the list/grid/map views

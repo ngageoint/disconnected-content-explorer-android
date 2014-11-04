@@ -11,15 +11,12 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.*;
 
 
 public class ReportDropbox extends Service {
 
     private static final String tag = ReportDropbox.class.getSimpleName();
-
-    private final File dropboxDir = new File(Environment.getExternalStorageDirectory(), "DICE");
-
-    private FileObserver dropboxObserver;
 
     private static final Map<Integer, String> fileEventNames = new HashMap<>();
     static {
@@ -34,6 +31,7 @@ public class ReportDropbox extends Service {
                     fileEventNames.put(f.getInt(FileObserver.class), f.getName());
                 }
                 catch (Exception e) {
+                    throw new Error("unexpected error populating file event names", e);
                 }
             }
         }
@@ -47,21 +45,55 @@ public class ReportDropbox extends Service {
         return name;
     }
 
+    private static final long STABILITY_CHECK_INTERVAL = 500;
+    private static final int MAX_STABILITY_CHECKS = 5;
+
+
+    private class FileStabilityCheck implements Callable<File> {
+        private final File file;
+        private int checkCount = 0;
+        private FileStabilityCheck(File file) {
+            this.file = file;
+        }
+        private boolean fileIsStable() {
+            return file.lastModified() < System.currentTimeMillis() - STABILITY_CHECK_INTERVAL;
+        }
+        private void schedule() {
+            fileChecking.schedule(this, STABILITY_CHECK_INTERVAL, TimeUnit.MILLISECONDS);
+        }
+        @Override
+        public File call() {
+            if (fileIsStable()) {
+                ReportManager.getInstance().processReports(file);
+            }
+            else if (++checkCount < MAX_STABILITY_CHECKS) {
+                schedule();
+            }
+            return null;
+        }
+    }
+
+    private File dropboxDir;
+    private FileObserver dropboxObserver;
+    private ScheduledExecutorService fileChecking = Executors.newSingleThreadScheduledExecutor();
+
     @Override
     public void onCreate() {
         Log.i("ReportDropbox", "creating report dropbox");
+        dropboxDir = new File(Environment.getExternalStorageDirectory(), "DICE");
         if (!dropboxDir.exists()) {
             dropboxDir.mkdirs();
         }
         if (!dropboxDir.isDirectory()) {
-            throw new RuntimeException("dropbox is not a directory: " + dropboxDir);
+            throw new RuntimeException("dropbox is not a directory and could not be created: " + dropboxDir);
         }
         dropboxObserver = new FileObserver(dropboxDir.getAbsolutePath(),
-                FileObserver.CLOSE_WRITE | FileObserver.MOVED_TO) {
+                FileObserver.CREATE | FileObserver.MOVED_TO) {
             @Override
             public void onEvent(int event, String fileName) {
                 Log.i(tag, "file event: " + nameOfFileEvent(event) + "; " + fileName);
-                ReportManager.getInstance().processReports(new File(dropboxDir, fileName));
+                File reportFile = new File(dropboxDir, fileName);
+                new FileStabilityCheck(reportFile).schedule();
             }
         };
         findExistingReports();
@@ -82,6 +114,7 @@ public class ReportDropbox extends Service {
     @Override
     public void onDestroy() {
         dropboxObserver.stopWatching();
+        fileChecking.shutdown();
     }
 
     @Override

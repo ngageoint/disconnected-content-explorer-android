@@ -159,7 +159,7 @@ public class ReportManager {
 							reportsDir.getAbsolutePath());
 		}
 		if (reportFiles == null) {
-			throw new IllegalArgumentException("report path is null");
+			throw new IllegalArgumentException("report file is null");
 		}
 		/*
 		 * TODO: use File objects for report files and retain the full path on the Report object and
