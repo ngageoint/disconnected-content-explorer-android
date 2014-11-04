@@ -129,11 +129,6 @@ public class ReportManager {
 	}
 	
 	public void processReports(File... reportFiles) {
-		if (!reportsDir.isDirectory() && !reportsDir.mkdirs()) {
-			throw new IllegalStateException(
-					"report directory path is not a directory and could not be created: " +
-							reportsDir.getAbsolutePath());
-		}
 		if (reportFiles == null) {
 			throw new IllegalArgumentException("report file is null");
 		}
