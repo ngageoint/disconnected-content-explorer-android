@@ -19,14 +19,12 @@ import android.widget.TextView;
 
 public class CustomList extends BaseAdapter {
 	
-	private final Activity activity;
 	private List<Report> reports;
 	private static LayoutInflater inflater = null;
 	
 	public CustomList(Activity activity, List<Report> reports) {
-		this.activity = activity;
 		this.reports = reports;
-		inflater = (LayoutInflater)activity.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+		inflater = (LayoutInflater) activity.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 	}
 	
 	
@@ -64,16 +62,21 @@ public class CustomList extends BaseAdapter {
 		if (!report.isEnabled()) {
 			title.setTextColor(Color.rgb(150,150,150));
 			classification.setTextColor(Color.rgb(150,150,150));
-		} else {
+		}
+		else {
 			title.setTextColor(Color.rgb(0,0,0));
 			classification.setTextColor(Color.rgb(0,0,0));
 		}
-		
-		
-		File image = new File(report.getPath() + "/" + report.getThumbnail());
-		if (image.exists()) {
-			Bitmap bitmap = BitmapFactory.decodeFile(image.getAbsolutePath());
-			thumbnail.setImageBitmap(bitmap);
+
+		if (report.getThumbnail() != null) {
+			File image = new File(report.getPath(), report.getThumbnail());
+			if (image.exists()) {
+				Bitmap bitmap = BitmapFactory.decodeFile(image.getAbsolutePath());
+				thumbnail.setImageBitmap(bitmap);
+			}
+			else {
+				thumbnail.setImageBitmap(null);
+			}
 		}
 		
 		view.setEnabled(report.isEnabled());

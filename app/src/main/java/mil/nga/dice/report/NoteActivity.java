@@ -6,14 +6,9 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 
 import mil.nga.dice.R;
-import mil.nga.dice.R.id;
-import mil.nga.dice.R.layout;
-import mil.nga.dice.R.menu;
 import android.app.Activity;
-import android.content.Intent;
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.Menu;

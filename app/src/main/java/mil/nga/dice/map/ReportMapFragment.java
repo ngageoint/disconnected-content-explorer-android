@@ -1,26 +1,18 @@
 package mil.nga.dice.map;
 
-import java.util.Collection;
-import java.util.List;
-
-import mil.nga.dice.R;
-import mil.nga.dice.report.Report;
-import mil.nga.dice.report.ReportDetailActivity;
-import mil.nga.dice.report.ReportManager;
 import android.app.Fragment;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
+import android.support.v4.content.LocalBroadcastManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.GoogleMap.CancelableCallback;
-import com.google.android.gms.maps.GoogleMap.OnInfoWindowClickListener;
-import com.google.android.gms.maps.GoogleMap.OnMapClickListener;
-import com.google.android.gms.maps.GoogleMap.OnMapLongClickListener;
-import com.google.android.gms.maps.GoogleMap.OnMarkerClickListener;
+import com.google.android.gms.maps.GoogleMap.*;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
@@ -28,11 +20,18 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.vividsolutions.jts.geom.Geometry;
+import mil.nga.dice.R;
+import mil.nga.dice.report.Report;
+import mil.nga.dice.report.ReportDetailActivity;
+import mil.nga.dice.report.ReportManager;
+
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 
 public class ReportMapFragment extends Fragment implements OnMapClickListener, OnMarkerClickListener, OnMapLongClickListener, OfflineMapLoader.OnOfflineFeaturesListener {
 
 	private List<Report> mReports;
-	ReportManager mReportManger;
 	private MapView mMapView;
 	private GoogleMap mMap;
 	private OfflineMap mOfflineMap;
@@ -46,12 +45,16 @@ public class ReportMapFragment extends Fragment implements OnMapClickListener, O
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		
-		mReportManger = ReportManager.getInstance();
-		mReports = mReportManger.getReports();
+		mReports = ReportManager.getInstance().getReports();
 		mOfflineMapLoader = new OfflineMapLoader(getActivity().getApplicationContext());
 		mOfflineMapLoader.registerOfflineMapListener(this);
-		
+		LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getActivity().getApplicationContext());
+		bm.registerReceiver(new BroadcastReceiver() {
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				refreshMapMarkers();
+			}
+		}, new IntentFilter(ReportManager.INTENT_UPDATE_REPORT_LIST));
 	}
 
 	
@@ -70,31 +73,30 @@ public class ReportMapFragment extends Fragment implements OnMapClickListener, O
 	
 	
 	public void refreshMapMarkers () {
-		
-		if (mMap != null) {
-			mMap.clear();
-			
-			for (int i = 0; i < mReports.size(); i ++) {
-				Report report = mReports.get(i);
-				if (report.getLat() != null && report.getLon() != null) {
-					MarkerOptions marker = new MarkerOptions().position(new LatLng(report.getLat(), report.getLon())).title(report.getTitle());
-					marker.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
-					mMap.addMarker(marker);
-					
-					LatLng latLng = new LatLng(report.getLat(), report.getLon());
-					float zoom = mMap.getCameraPosition().zoom < 1 ? 1 : mMap.getCameraPosition().zoom;
-					mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom), new CancelableCallback() {
-						@Override
-						public void onCancel() {
-							// TODO
-						}
+		if (mMap == null) {
+			return;
+		}
 
-						@Override
-						public void onFinish() {
-							// TODO
-						}
-					});
-				}
+		mMap.clear();
+
+		for (Report report : mReports) {
+			if (report.getLat() != null && report.getLon() != null) {
+				MarkerOptions marker = new MarkerOptions().position(new LatLng(report.getLat(), report.getLon())).title(report.getTitle());
+				marker.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
+				mMap.addMarker(marker);
+
+				LatLng latLng = new LatLng(report.getLat(), report.getLon());
+				float zoom = mMap.getCameraPosition().zoom < 1 ? 1 : mMap.getCameraPosition().zoom;
+				mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom), new CancelableCallback() {
+					@Override
+					public void onCancel() {
+						// TODO
+					}
+					@Override
+					public void onFinish() {
+						// TODO
+					}
+				});
 			}
 		}
 	}
@@ -116,7 +118,6 @@ public class ReportMapFragment extends Fragment implements OnMapClickListener, O
 				public void onCancel() {
 					// TODO
 				}
-
 				@Override
 				public void onFinish() {
 					// TODO
@@ -126,19 +127,17 @@ public class ReportMapFragment extends Fragment implements OnMapClickListener, O
 			mMap.setOnInfoWindowClickListener(new OnInfoWindowClickListener() {
 	            @Override
 	            public void onInfoWindowClick(Marker marker) {
-	            	
 	            	String title = marker.getTitle();
-	            	Report report = null;
-	            	
-	            	for (int i = 0; i < mReports.size(); i ++) {
-	    				if (mReports.get(i).getTitle().equalsIgnoreCase(title)) {
-	    					report = mReports.get(i);
-	    					break;
-	    				}
-	            	}
-	            	
+	            	Report targetReport = null, currentReport;
+					Iterator<Report> cursor = mReports.iterator();
+					while (cursor.hasNext() && targetReport == null) {
+						currentReport = cursor.next();
+						if (currentReport.getTitle().equalsIgnoreCase(title)) {
+							targetReport = currentReport;
+						}
+					}
 	            	Intent detailIntent = new Intent(getActivity(), ReportDetailActivity.class);
-	    			detailIntent.putExtra("report", report);
+	    			detailIntent.putExtra("report", targetReport);
 	    			startActivity(detailIntent);
 	            }
 	        });

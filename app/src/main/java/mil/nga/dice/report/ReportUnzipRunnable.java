@@ -1,26 +1,24 @@
 package mil.nga.dice.report;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import android.util.Log;
+import org.json.JSONObject;
+
+import java.io.*;
+import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import org.json.JSONObject;
-
-import android.util.Log;
-
 /**
  * This runnable unzips a DICE report.
  */
 public class ReportUnzipRunnable implements Runnable {
 
-	private static final int BUFFER_SIZE = 4096;
+	private static final String tag = ReportUnzipRunnable.class.getSimpleName();
+
+	private static final int BUFFER_SIZE = 1 << 16;
 
 	final ReportManager reportManager = ReportManager.getInstance();
 	final Report report;
@@ -35,17 +33,17 @@ public class ReportUnzipRunnable implements Runnable {
 	 */
 	@Override
 	public void run() {
-		File diceRoot = reportManager.getDiceRoot();
-		String unzippedFolderName = report.getFilename().substring(0, report.getFilename().lastIndexOf("."));
-		File unzippedFolder = new File(diceRoot, unzippedFolderName);
+		String unzipDirName = report.getFileName().substring(0, report.getFileName().lastIndexOf("."));
+		File reportContentRoot = new File(ReportManager.getInstance().getReportsDir(), unzipDirName);
 
 		try {
-			if (!unzippedFolder.exists()) {
-				unzip(reportManager.getDiceRoot() + "/" + report.getFilename(), diceRoot.getPath());
+			Log.i(tag, "unzipping report package " + report.getSourceFile());
+			if (!reportContentRoot.exists()) {
+				unzip(report.getSourceFile(), reportManager.getReportsDir());
 			}
 
 			// handle the metadata.json file to fancy up the report object for the list/grid/map views
-			File metadataFile = new File(diceRoot, unzippedFolderName + File.separator + "metadata.json");
+			File metadataFile = new File(reportContentRoot, "metadata.json");
 
 			if (metadataFile.exists()) {
 				String jsonString = null;
@@ -85,31 +83,28 @@ public class ReportUnzipRunnable implements Runnable {
 			}
 		}
 		catch (Exception e) {
-			Log.i("ReportUnzipRunnable", "Problem populating object:\n" + e.getLocalizedMessage());
-			report.setDescription("Problem unzipping report");
+			Log.i("ReportUnzipRunnable", "error unzipping report file " +
+					report.getSourceFile() + ": " + e.getLocalizedMessage());
+			report.setDescription("Error unzipping report");
 			report.setEnabled(false);
 		}
 
 		reportManager.handleState(report, ReportManager.LOAD_COMPLETE);
 	}
-	
-	
-	private void unzip(String zipFilePath, String destinationDirectoryPath) throws IOException {
-		File destDir = new File(destinationDirectoryPath);
-		if (!destDir.exists()) {
-			destDir.mkdir();
-		}
-		
-		ZipInputStream zipIn = new ZipInputStream(new FileInputStream(zipFilePath));
+
+
+	private void unzip(File zipFile, File toDir) throws IOException {
+		byte[] entryBuffer = new byte[BUFFER_SIZE];
+		ZipInputStream zipIn = new ZipInputStream(new FileInputStream(zipFile));
 		try {
 			ZipEntry entry = zipIn.getNextEntry();
 			while (entry != null) {
-				String filePath = destinationDirectoryPath + File.separator + entry.getName();
-				if (!entry.isDirectory()) {
-					extractFile(zipIn, filePath);
-				} else {
-					File dir = new File(filePath);
-					dir.mkdir();
+				File entryFile = new File(toDir, entry.getName());
+				if (entry.isDirectory()) {
+					entryFile.mkdir();
+				}
+				else {
+					extractEntryFile(zipIn, entryFile, entryBuffer);
 				}
 				zipIn.closeEntry();
 				entry = zipIn.getNextEntry();
@@ -121,13 +116,12 @@ public class ReportUnzipRunnable implements Runnable {
 	}
 	
 	
-	private void extractFile(ZipInputStream zipIn, String filePath) throws IOException {
-		BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(filePath));
-		byte[] bytesIn = new byte[BUFFER_SIZE];
+	private void extractEntryFile(ZipInputStream zipIn, File toFile, byte[] entryBuffer) throws IOException {
+		OutputStream entryOut = new FileOutputStream(toFile);
 		int read;
-		while ((read = zipIn.read(bytesIn)) != -1) {
-			bos.write(bytesIn, 0, read);
+		while ((read = zipIn.read(entryBuffer)) != -1) {
+			entryOut.write(entryBuffer, 0, read);
 		}
-		bos.close();
+		entryOut.close();
 	}
 }

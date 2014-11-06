@@ -1,25 +1,23 @@
 package mil.nga.dice.listview;
 
-import java.util.List;
-
-import mil.nga.dice.report.Report;
-import mil.nga.dice.report.ReportDetailFragment;
-import mil.nga.dice.report.ReportManager;
 import android.app.Activity;
 import android.app.ListFragment;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
-import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v4.widget.SwipeRefreshLayout.OnRefreshListener;
+import android.support.v4.content.LocalBroadcastManager;
 import android.view.View;
 import android.widget.ListView;
+import mil.nga.dice.report.Report;
+import mil.nga.dice.report.ReportManager;
 
 /**
  * Activities containing this fragment MUST implement the {@link Callbacks}
  * interface.
  */
 public class ReportListFragment extends ListFragment {
-	ReportManager mReportManager;
-	private List<Report> mReports;
 	private CustomList mReportsAdapter;
 	
 	/**
@@ -71,13 +69,15 @@ public class ReportListFragment extends ListFragment {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		mReportManager = ReportManager.getInstance();
-		mReportManager.setReportListFragment(this);
-		mReportManager.loadReports();
-		mReports = mReportManager.getReports();
-		mReportsAdapter = new CustomList(getActivity(), mReports);
-		
+		mReportsAdapter = new CustomList(getActivity(), ReportManager.getInstance().getReports());
 		setListAdapter(mReportsAdapter);
+		LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getActivity().getApplicationContext());
+		bm.registerReceiver(new BroadcastReceiver() {
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				mReportsAdapter.notifyDataSetChanged();
+			}
+		}, new IntentFilter(ReportManager.INTENT_UPDATE_REPORT_LIST));
 	}
 
 
@@ -106,23 +106,8 @@ public class ReportListFragment extends ListFragment {
 
 		mCallbacks = (Callbacks) activity;
 	}
-	
-	
-	public void refreshListAdapter () {
-		mReportsAdapter.notifyDataSetChanged();
-	}
-	
-	
-	public void setReportList (List<Report> reports) {
-		mReports = reports;
-		mReportsAdapter.notifyDataSetChanged();
-	}
 
-	
-	public List<Report> getReports () {
-		return mReports;
-	}
-	
+
 	@Override
 	public void onDetach() {
 		super.onDetach();
@@ -131,13 +116,11 @@ public class ReportListFragment extends ListFragment {
 
 	
 	@Override
-	public void onListItemClick(ListView listView, View view, int position,
-			long id) {
+	public void onListItemClick(ListView listView, View view, int position, long id) {
 		super.onListItemClick(listView, view, position, id);
-
 		// Notify the active callbacks interface (the activity, if the
 		// fragment is attached to one) that an item has been selected.
-		mCallbacks.onItemSelected(mReportManager.getReportList().get(position));
+		mCallbacks.onItemSelected((Report) mReportsAdapter.getItem(position));
 	}
 
 	
@@ -150,27 +133,14 @@ public class ReportListFragment extends ListFragment {
 		}
 	}
 
-	
-	/**
-	 * Turns on activate-on-click mode. When this mode is on, list items will be
-	 * given the 'activated' state when touched.
-	 */
-	public void setActivateOnItemClick(boolean activateOnItemClick) {
-		// When setting CHOICE_MODE_SINGLE, ListView will automatically
-		// give items the 'activated' state when touched.
-		getListView().setChoiceMode(
-				activateOnItemClick ? ListView.CHOICE_MODE_SINGLE
-						: ListView.CHOICE_MODE_NONE);
-	}
 
-	
 	private void setActivatedPosition(int position) {
 		if (position == ListView.INVALID_POSITION) {
 			getListView().setItemChecked(mActivatedPosition, false);
-		} else {
+		}
+		else {
 			getListView().setItemChecked(position, true);
 		}
-
 		mActivatedPosition = position;
 	}
 }

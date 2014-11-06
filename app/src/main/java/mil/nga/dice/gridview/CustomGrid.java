@@ -18,14 +18,12 @@ import android.widget.TextView;
 
 public class CustomGrid extends BaseAdapter {
 
-	private final Activity mActivity;
 	private List<Report> mReports;
 	private static LayoutInflater inflater = null;
 	
 	public CustomGrid(Activity activity, List<Report> reports) {
-		this.mActivity = activity;
 		this.mReports = reports;
-		inflater = (LayoutInflater)mActivity.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+		inflater = (LayoutInflater) activity.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 	}
 	
 	
@@ -53,22 +51,28 @@ public class CustomGrid extends BaseAdapter {
 		
 		if (convertView != null) {
 			 view = convertView;
-		} else {
+		}
+		else {
 			view = inflater.inflate(R.layout.grid_item, null, false);
 		}
 		
-		ImageView tileThumbnail = (ImageView)view.findViewById(R.id.tileThumbnail);
-		TextView title = (TextView)view.findViewById(R.id.title);
+		ImageView tileThumbnail = (ImageView) view.findViewById(R.id.tileThumbnail);
+		TextView title = (TextView) view.findViewById(R.id.title);
 
 		Report report = mReports.get(position);
 		title.setText(report.getTitle());
-		
-		File image = new File(report.getPath() + "/" + report.getThumbnail());
-		if (image.exists()) {
-			Bitmap bitmap = BitmapFactory.decodeFile(image.getAbsolutePath());
-			tileThumbnail.setImageBitmap(bitmap);
+
+		if (report.getThumbnail() != null) {
+			File image = new File(report.getPath(), report.getThumbnail());
+			if (image.exists()) {
+				Bitmap bitmap = BitmapFactory.decodeFile(image.getAbsolutePath());
+				tileThumbnail.setImageBitmap(bitmap);
+			}
 		}
-		
+		else {
+			tileThumbnail.setImageBitmap(null);
+		}
+
 		return view;
 	}
 }
