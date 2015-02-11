@@ -47,10 +47,8 @@ android {
 dependencies {
     compile 'com.android.support:support-v4:21.0.3'
     compile 'com.google.android.gms:play-services:6.5.87'
-    compile files('libs/jackson-annotations-2.3.3.jar')
-    compile files('libs/jackson-core-2.3.3.jar')
-    compile files('libs/jackson-databind-2.3.3.jar')
-    compile files('libs/jts-1.8.jar')
+    compile 'com.vividsolutions:jts:1.13'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.5.1'
 
     androidTestCompile 'org.hamcrest:hamcrest-core:1.3'
 }
