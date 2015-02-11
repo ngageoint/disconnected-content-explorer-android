@@ -60,7 +60,7 @@ public class OfflineMapLoader {
 	    
 		@Override
 		protected Collection<Geometry> doInBackground(Void... params) {
-		    Collection<Geometry> geometries = new ArrayList<Geometry>();
+		    Collection<Geometry> geometries = new ArrayList<>();
             InputStream is = null;
             try {
                 is = mContext.getAssets().open(OFFLINE_MAP_FILENAME);

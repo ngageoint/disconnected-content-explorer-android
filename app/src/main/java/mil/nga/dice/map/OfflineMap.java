@@ -15,6 +15,7 @@ import com.google.android.gms.maps.model.TileOverlay;
 import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.MultiPolygon;
 
 public class OfflineMap {
     private static int FILL_COLOR = 0xFFDDDDDD;
@@ -69,35 +70,45 @@ public class OfflineMap {
     
     
     private class OfflineMapsTask extends AsyncTask<Geometry, Void, Collection<PolygonOptions>> {
-   
+
+        private PolygonOptions transformPolygon(com.vividsolutions.jts.geom.Polygon polygon) {
+            PolygonOptions options = new PolygonOptions()
+                    .zIndex(2)
+                    .visible(false)
+                    .fillColor(FILL_COLOR)
+                    .strokeWidth(0);
+
+            for (Coordinate coordinate : polygon.getExteriorRing().getCoordinates()) {
+                options.add(new LatLng(coordinate.y, coordinate.x));
+            }
+
+            for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
+                Coordinate[] coordinates = polygon.getInteriorRingN(0).getCoordinates();
+                Collection<LatLng> hole = new ArrayList<>(coordinates.length);
+                for (Coordinate coordinate : coordinates) {
+                    hole.add(new LatLng(coordinate.y, coordinate.x));
+                }
+                options.addHole(hole);
+            }
+
+            return options;
+        }
+
         @Override
         protected Collection<PolygonOptions> doInBackground(Geometry... features) {
-            Collection<PolygonOptions> polygons = new ArrayList<PolygonOptions>(features.length);
+            Collection<PolygonOptions> polygons = new ArrayList<>(features.length);
+
             for (Geometry feature : features) {
                 // For now all offline map features are polygons
                 if ("Polygon".equals(feature.getGeometryType())) {
-                    PolygonOptions options = new PolygonOptions()
-                        .zIndex(2)
-                        .visible(false)
-                        .fillColor(FILL_COLOR)
-                        .strokeWidth(0);
-                    
-                    com.vividsolutions.jts.geom.Polygon polygon = (com.vividsolutions.jts.geom.Polygon) feature;
-                    for (Coordinate coordinate : polygon.getExteriorRing().getCoordinates()) {
-                        options.add(new LatLng(coordinate.y, coordinate.x));
+                    polygons.add(transformPolygon((com.vividsolutions.jts.geom.Polygon) feature));
+                }
+                else if ("MultiPolygon".equals(feature.getGeometryType())) {
+                    MultiPolygon mp = (MultiPolygon) feature;
+                    for (int i = 0; i < mp.getNumGeometries(); i++) {
+                        com.vividsolutions.jts.geom.Polygon polygon = (com.vividsolutions.jts.geom.Polygon) mp.getGeometryN(i);
+                        polygons.add(transformPolygon(polygon));
                     }
-                    
-                    for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
-                        Coordinate[] coordinates = polygon.getInteriorRingN(0).getCoordinates();
-                        Collection<LatLng> hole = new ArrayList<LatLng>(coordinates.length);
-                        for (Coordinate coordinate : coordinates) {
-                            hole.add(new LatLng(coordinate.y, coordinate.x));
-                        }                     
-                        
-                        options.addHole(hole);
-                    }
-                    
-                    polygons.add(options);
                 }
             }
             
@@ -107,7 +118,9 @@ public class OfflineMap {
         @Override
         protected void onPostExecute(Collection<PolygonOptions> polygons) {
             offlinePolygons = new ArrayList<Polygon>(polygons.size());
-            if (mVisible) mMapUI.setMapType(GoogleMap.MAP_TYPE_NONE);
+            if (mVisible) {
+                mMapUI.setMapType(GoogleMap.MAP_TYPE_NONE);
+            }
 
             backgroundTileOverlay.setVisible(mVisible);
             for (PolygonOptions polygon : polygons) {

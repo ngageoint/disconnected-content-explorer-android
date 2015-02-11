@@ -110,6 +110,9 @@ public class GeometryDeserializer extends Deserializer {
 
     
     private LinearRing[] parseInteriorRings(JsonNode arrayOfRings) throws JsonParseException, IOException {
+//        if (arrayOfRings.size() < 2) {
+//            return null;
+//        }
         LinearRing rings[] = new LinearRing[arrayOfRings.size() - 1];
         for (int i = 1; i < arrayOfRings.size(); i++) {
             rings[i - 1] = geometryFactory.createLinearRing(parseLineString(arrayOfRings.get(i)));
