@@ -10,11 +10,13 @@ import android.os.Bundle;
 import android.support.v4.content.LocalBroadcastManager;
 import android.view.View;
 import android.widget.ListView;
+
+import mil.nga.dice.ReportCollectionCallbacks;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportManager;
 
 /**
- * Activities containing this fragment MUST implement the {@link Callbacks}
+ * Activities containing this fragment MUST implement the {@link mil.nga.dice.ReportCollectionCallbacks}
  * interface.
  */
 public class ReportListFragment extends ListFragment {
@@ -27,37 +29,12 @@ public class ReportListFragment extends ListFragment {
 	private static final String STATE_ACTIVATED_POSITION = "activated_position";
 
 	/**
-	 * The fragment's current callback object, which is notified of list item
-	 * clicks.
-	 */
-	private Callbacks mCallbacks = reportCallbacks;
-
-	/**
 	 * The current activated item position. Only used on tablets.
 	 */
 	private int mActivatedPosition = ListView.INVALID_POSITION;
 
-	/**
-	 * A callback interface that all activities containing this fragment must
-	 * implement. This mechanism allows activities to be notified of item
-	 * selections.
-	 */
-	public interface Callbacks {
-		/**
-		 * Callback for when an item has been selected.
-		 */
-		public void onItemSelected(Report report);
-	}
+    private ReportCollectionCallbacks mCallbacks;
 
-	
-	private static Callbacks reportCallbacks = new Callbacks() {
-		@Override
-		public void onItemSelected(Report report) {
-			System.out.println("List item selected");
-		}
-	};
-
-	
 	/**
 	 * Mandatory empty constructor for the fragment manager to instantiate the
 	 * fragment (e.g. upon screen orientation changes).
@@ -69,6 +46,7 @@ public class ReportListFragment extends ListFragment {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
 		mReportsAdapter = new CustomList(getActivity(), ReportManager.getInstance().getReports());
 		setListAdapter(mReportsAdapter);
 		LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getActivity().getApplicationContext());
@@ -99,34 +77,35 @@ public class ReportListFragment extends ListFragment {
 		super.onAttach(activity);
 
 		// Activities containing this fragment must implement its callbacks.
-		if (!(activity instanceof Callbacks)) {
+		if (!(activity instanceof ReportCollectionCallbacks)) {
 			throw new IllegalStateException(
-					"Activity must implement fragment's callbacks.");
+					"parent activity must implement " + ReportCollectionCallbacks.class.getName());
 		}
 
-		mCallbacks = (Callbacks) activity;
+		mCallbacks = (ReportCollectionCallbacks) activity;
 	}
 
 
 	@Override
 	public void onDetach() {
 		super.onDetach();
-		mCallbacks = reportCallbacks;
+
+		mCallbacks = null;
 	}
 
 	
 	@Override
 	public void onListItemClick(ListView listView, View view, int position, long id) {
 		super.onListItemClick(listView, view, position, id);
-		// Notify the active callbacks interface (the activity, if the
-		// fragment is attached to one) that an item has been selected.
-		mCallbacks.onItemSelected((Report) mReportsAdapter.getItem(position));
+
+		mCallbacks.reportSelectedToView((Report) mReportsAdapter.getItem(position));
 	}
 
 	
 	@Override
 	public void onSaveInstanceState(Bundle outState) {
 		super.onSaveInstanceState(outState);
+
 		if (mActivatedPosition != ListView.INVALID_POSITION) {
 			// Serialize and persist the activated item position.
 			outState.putInt(STATE_ACTIVATED_POSITION, mActivatedPosition);

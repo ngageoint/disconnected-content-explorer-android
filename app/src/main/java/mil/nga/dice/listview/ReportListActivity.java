@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.ArrayList;
 
 import mil.nga.dice.R;
+import mil.nga.dice.ReportCollectionCallbacks;
 import mil.nga.dice.gridview.ReportGridActivity;
 import mil.nga.dice.map.ReportMapActivity;
 import mil.nga.dice.report.Report;
@@ -21,9 +22,9 @@ import android.view.MenuItem;
 /**
  * An activity representing a list of Reports. 
  * This activity implements the required
- * {@link ReportListFragment.Callbacks} interface to listen for item selections.
+ * {@link ReportCollectionCallbacks} interface to listen for item selections.
  */
-public class ReportListActivity extends Activity implements ReportListFragment.Callbacks {
+public class ReportListActivity extends Activity implements ReportCollectionCallbacks {
 	
 	String mSrcScheme;
 	String mReportId;
@@ -31,6 +32,7 @@ public class ReportListActivity extends Activity implements ReportListFragment.C
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
 		setContentView(R.layout.activity_report_list);
 		
 		// TODO: If exposing deep links into your app, handle intents here.
@@ -50,15 +52,15 @@ public class ReportListActivity extends Activity implements ReportListFragment.C
 
 	
 	/**
-	 * Callback method from {@link ReportListFragment.Callbacks} indicating that
-	 * the item with the given ID was selected.
+	 * Callback method from {@link ReportCollectionCallbacks} indicating that
+	 * the given report was selected.
 	 */
 	@Override
-	public void onItemSelected(Report report) {
+	public void reportSelectedToView(Report report) {
 		if (!report.isEnabled()) {
 			return;
 		}
-		// Start the detail activity for the selected item ID.
+		// Start the detail activity for the selected report
 		if (report.getFileExtension().equalsIgnoreCase("zip")) {
 			Intent detailIntent = new Intent(this, ReportDetailActivity.class);
 			detailIntent.putExtra("report", report);
