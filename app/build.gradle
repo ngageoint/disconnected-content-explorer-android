@@ -12,13 +12,13 @@ project.ext {
 }
 
 android {
-    compileSdkVersion 19
-    buildToolsVersion '20.0.0'
+    compileSdkVersion 21
+    buildToolsVersion '21.1.2'
     defaultConfig {
-        applicationId 'mil.nga.dice'
-        minSdkVersion 14
-        targetSdkVersion 19
-        testApplicationId 'mil.nga.dice.test'
+        minSdkVersion 16
+        targetSdkVersion 21
+        applicationId 'mil.nga.giat.dice'
+        testApplicationId 'mil.nga.giat.dice.test'
     }
     buildTypes {
         release {
