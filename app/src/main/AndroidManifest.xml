@@ -41,10 +41,10 @@
             android:name=".report.ReportDetailActivity"
             android:label="@string/title_report_detail"
             android:launchMode="singleTop"
-            android:parentActivityName=".listview.ReportListActivity" >
+            android:parentActivityName=".ReportCollectionActivity" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="mil.nga.dice.listview.ReportListActivity" />
+                android:value="mil.nga.dice.ReportCollectionActivity" />
         </activity>
 
         <activity
