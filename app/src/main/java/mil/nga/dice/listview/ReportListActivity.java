@@ -1,6 +1,5 @@
 package mil.nga.dice.listview;
 
-import java.io.File;
 import java.util.ArrayList;
 
 import mil.nga.dice.R;
@@ -8,13 +7,10 @@ import mil.nga.dice.ReportCollectionCallbacks;
 import mil.nga.dice.gridview.ReportGridActivity;
 import mil.nga.dice.map.ReportMapActivity;
 import mil.nga.dice.report.Report;
-import mil.nga.dice.report.ReportDetailActivity;
 import mil.nga.dice.report.ReportManager;
 import android.app.Activity;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -26,28 +22,11 @@ import android.view.MenuItem;
  */
 public class ReportListActivity extends Activity implements ReportCollectionCallbacks {
 	
-	String mSrcScheme;
-	String mReportId;
-	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		setContentView(R.layout.activity_report_list);
-		
-		// TODO: If exposing deep links into your app, handle intents here.
-		Uri deepLinkUrl = getIntent().getData();
-		if (deepLinkUrl != null) {
-			mSrcScheme = deepLinkUrl.getQueryParameter("srcScheme");
-			mReportId = deepLinkUrl.getQueryParameter("reportID");
-			Log.i("ReportListActivity", "Params from URL: srcScheme " + mSrcScheme + " reportID " + mReportId);
-			Report requestedReport = ReportManager.getInstance().getReportWithID(mReportId);
-			if (requestedReport != null) {
-				Intent detailIntent = new Intent(this, ReportDetailActivity.class);
-				detailIntent.putExtra("report", requestedReport);
-				startActivity(detailIntent);
-			}
-		}
+		setContentView(R.layout.fragment_report_list);
 	}
 
 	
@@ -57,22 +36,7 @@ public class ReportListActivity extends Activity implements ReportCollectionCall
 	 */
 	@Override
 	public void reportSelectedToView(Report report) {
-		if (!report.isEnabled()) {
-			return;
-		}
-		// Start the detail activity for the selected report
-		if (report.getFileExtension().equalsIgnoreCase("zip")) {
-			Intent detailIntent = new Intent(this, ReportDetailActivity.class);
-			detailIntent.putExtra("report", report);
-			startActivity(detailIntent);
-		}
-		else if (report.getFileExtension().equalsIgnoreCase("pdf")) {
-			File file = report.getPath();
-			Intent intent = new Intent(Intent.ACTION_VIEW);
-			intent.setDataAndType(Uri.fromFile(file), "application/pdf");
-			intent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
-			startActivity(intent);
-		}
+
 	}
 	
 	
