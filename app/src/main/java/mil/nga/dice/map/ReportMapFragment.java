@@ -37,8 +37,9 @@ public class ReportMapFragment extends Fragment implements OnMapClickListener, O
 	private OfflineMap mOfflineMap;
 	private OfflineMapLoader mOfflineMapLoader;
 	
-	private static final String TAG = "ReportMapFragment";
-	
+	private static final String TAG = "ReportMap";
+
+
 	public ReportMapFragment() {} 
 	
 	
@@ -60,7 +61,7 @@ public class ReportMapFragment extends Fragment implements OnMapClickListener, O
 	
 	@Override 
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-		final View view = inflater.inflate(R.layout.activity_report_map, container, false);
+		final View view = inflater.inflate(R.layout.fragment_report_map, container, false);
 		
 		mMapView = (MapView) view.findViewById(R.id.map);
 		mMapView.onCreate(savedInstanceState);
