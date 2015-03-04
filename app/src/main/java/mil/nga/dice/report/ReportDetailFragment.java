@@ -4,6 +4,8 @@ import java.io.File;
 
 import android.annotation.TargetApi;
 import android.os.Build;
+
+import mil.nga.dice.JavaScriptAPI;
 import mil.nga.dice.R;
 import android.annotation.SuppressLint;
 import android.app.Fragment;
@@ -11,6 +13,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 
 /**
@@ -54,10 +57,12 @@ public class ReportDetailFragment extends Fragment {
 		File reportFile = new File(mReport.getPath(), "index.html");
 		if (reportFile.canRead() && reportFile.length() > 0) {
 			WebView webView = (WebView) rootView.findViewById(R.id.report_detail);
-			webView.getSettings().setJavaScriptEnabled(true);
+            webView.addJavascriptInterface(new JavaScriptAPI(this.getActivity(), mReport), "WebViewJavascriptBridge");
+
+            WebSettings settings = webView.getSettings();
+            settings.setJavaScriptEnabled(true);
+            settings.setDomStorageEnabled(true);
 			webView.loadUrl(reportFile.toURI().toASCIIString());
-			// TODO: block network?
-			// webView.getSettings().getBlockNetworkLoads();
 			enableFileAjax(webView);
 		}
 		return rootView;
