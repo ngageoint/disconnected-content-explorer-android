@@ -37,34 +37,6 @@
             </intent-filter>
         </activity>
 
-        <!--
-        <activity
-            android:name=".listview.ReportListActivity"
-            android:label="@string/app_name" >
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <intent-filter>
-                <data android:scheme="dice" />
-
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-            </intent-filter>
-        </activity>
-
-        <activity
-            android:name=".gridview.ReportGridActivity"
-            android:label="@string/app_name" />
-
-        <activity
-            android:name=".map.ReportMapActivity"
-            android:label="@string/app_name" />
-        -->
-
         <activity
             android:name=".report.ReportDetailActivity"
             android:label="@string/title_report_detail"

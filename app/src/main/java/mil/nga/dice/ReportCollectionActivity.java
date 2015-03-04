@@ -1,6 +1,7 @@
 package mil.nga.dice;
 
 import android.app.Activity;
+import android.app.Fragment;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -10,12 +11,16 @@ import android.view.MenuItem;
 
 import java.io.File;
 
+import mil.nga.dice.gridview.ReportGridFragment;
 import mil.nga.dice.listview.ReportListFragment;
+import mil.nga.dice.map.ReportMapFragment;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
 import mil.nga.dice.report.ReportManager;
 
 public class ReportCollectionActivity extends Activity implements ReportCollectionCallbacks {
+
+    private int currentViewId = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,9 +29,7 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
         setContentView(R.layout.activity_report_collection);
 
         if (savedInstanceState == null) {
-            getFragmentManager().beginTransaction()
-                    .add(R.id.report_collection, new ReportListFragment())
-                    .commit();
+            showListView();
         }
 
         // TODO: If exposing deep links into your app, handle intents here.
@@ -37,9 +40,9 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
         */
         Uri deepLinkUrl = getIntent().getData();
         if (deepLinkUrl != null) {
+            Log.i("ReportCollection", "data url: " + deepLinkUrl);
             String srcScheme = deepLinkUrl.getQueryParameter("srcScheme");
             String reportId = deepLinkUrl.getQueryParameter("reportID");
-            Log.i("ReportListActivity", "Params from URL: srcScheme " + srcScheme + " reportID " + reportId);
             Report requestedReport = ReportManager.getInstance().getReportWithID(reportId);
             if (requestedReport != null) {
                 Intent detailIntent = new Intent(this, ReportDetailActivity.class);
@@ -48,7 +51,6 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
             }
         }
     }
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -66,11 +68,49 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_about) {
+            // TODO: add an about activity
             return true;
         }
 
-        return super.onOptionsItemSelected(item);
+        return showCollectionViewForOptionItemId(id);
     }
+
+    private boolean showCollectionViewForOptionItemId(int id) {
+        if (id == currentViewId) {
+            return false;
+        }
+
+        if (id == R.id.collection_view_list) {
+            showListView();
+        }
+        else if (id == R.id.collection_view_grid) {
+            showGridView();
+        }
+        else if (id == R.id.collection_view_map) {
+            showMapView();
+        }
+
+        return false;
+    }
+
+    private void showListView() {
+        getFragmentManager().beginTransaction()
+                .replace(R.id.report_collection, new ReportListFragment())
+                .commit();
+    }
+
+    private void showGridView() {
+        getFragmentManager().beginTransaction()
+                .replace(R.id.report_collection, new ReportGridFragment())
+                .commit();
+    }
+
+    private void showMapView() {
+        getFragmentManager().beginTransaction()
+                .replace(R.id.report_collection, new ReportMapFragment())
+                .commit();
+    }
+
 
     @Override
     public void reportSelectedToView(Report report) {
