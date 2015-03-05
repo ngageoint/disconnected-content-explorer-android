@@ -4,6 +4,9 @@ import android.app.Application;
 import android.content.Intent;
 import android.os.Environment;
 import android.util.Log;
+
+import com.google.android.gms.maps.MapsInitializer;
+
 import mil.nga.dice.report.ReportDropbox;
 import mil.nga.dice.report.ReportManager;
 
@@ -27,6 +30,7 @@ public class DICE extends Application {
         ReportManager.initialize(this)
                 .reportsDir(reportsDir)
                 .finish();
+        MapsInitializer.initialize(this);
         startService(new Intent(this, ReportDropbox.class));
     }
 
