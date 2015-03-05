@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
@@ -15,8 +16,8 @@ public class FeatureDeserializer extends Deserializer {
 
 	private GeometryDeserializer geometryDeserializer = new GeometryDeserializer();
 
-	public Collection<Geometry> parseFeatures(InputStream is) throws JsonParseException, IOException {
-	    Collection<Geometry> features = new ArrayList<Geometry>();
+	public List<Geometry> parseFeatures(InputStream is) throws JsonParseException, IOException {
+	    List<Geometry> features = new ArrayList<Geometry>();
 		JsonParser parser = factory.createParser(is);
 		parser.nextToken();
 
