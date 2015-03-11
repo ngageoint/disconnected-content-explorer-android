@@ -118,6 +118,10 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
         if (resultCode != RESULT_OK) {
             return;
         }
+        /*
+        TODO: figure out how to handle importing data from other app's content:// uris.
+        maybe just copy the file into the dropbox for now.  copying is necessary for pdf, etc. anyway
+         */
         handleIntentData(data);
     }
 

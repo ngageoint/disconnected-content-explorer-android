@@ -15,7 +15,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
 
-// TODO: change to be a service?
+/**
+ * TODO: modify to look for content roots in report dir instead of tying to source file
+ */
 public class ReportManager {
 
 	public static final String INTENT_UPDATE_REPORT_LIST = ReportManager.class.getName() + ".UPDATE_REPORT_LIST";
