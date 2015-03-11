@@ -80,6 +80,8 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
             return false;
         }
 
+        currentViewId = id;
+
         if (id == R.id.collection_view_list) {
             showListView();
         }
@@ -90,7 +92,7 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
             showMapView();
         }
 
-        return false;
+        return currentViewId == id;
     }
 
     private void showListView() {
