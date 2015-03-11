@@ -2,8 +2,11 @@ package mil.nga.dice.report;
 
 import android.app.Application;
 import android.content.Intent;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Process;
+import android.provider.OpenableColumns;
 import android.support.v4.content.LocalBroadcastManager;
 
 import java.io.File;
@@ -128,33 +131,46 @@ public class ReportManager {
 		return reportsView;
 	}
 	
-	public void processReports(File... reportFiles) {
-		if (reportFiles == null) {
+	public void processReports(Uri... reports) {
+		if (reports == null) {
 			throw new IllegalArgumentException("report file is null");
 		}
-		for (File reportFile : reportFiles) {
-			String fileName = reportFile.getName();
+		for (Uri reportUri : reports) {
+            String fileName = reportUri.toString();
+            if ("file".equals(reportUri.getScheme())) {
+                File reportFile = new File(reportUri.getPath());
+                fileName = reportFile.getName();
+            }
+            else if ("content".equals(reportUri.getScheme())) {
+                Cursor reportInfo = app.getContentResolver().query(reportUri, null, null, null, null);
+                int nameCol = reportInfo.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                reportInfo.moveToFirst();
+                fileName = reportInfo.getString(nameCol);
+            }
+
 			String extension = fileName.substring(fileName.lastIndexOf(".") + 1);
 			String simpleName = fileName.substring(0, fileName.lastIndexOf("."));
 
 			Report report = new Report();
-			report.setSourceFile(reportFile);
-			report.setTitle(simpleName);
+			report.setSourceFile(reportUri);
+            report.setSourceFileName(fileName);
+			report.setTitle(fileName);
 			report.setDescription("Processing report ...");
 			report.setEnabled(false);
 
-			if (extension.equals("zip")) {
+            String mimeType = app.getContentResolver().getType(reportUri);
+			if ("application/zip".equals(mimeType) || "zip".equalsIgnoreCase(extension)) {
 				File unzipDir = new File(reportsDir, simpleName);
 				report.setPath(unzipDir);
 				addReport(report);
 				// TODO: need to refactor this to use the threadpool properly
 				startUnzip(report);
 			}
-			else if (extension.equals("pdf")) {
+			else if ("application/pdf".equals(mimeType) || "pdf".equalsIgnoreCase(extension)) {
 			 	// TODO: need to look into more PDF options on android
 				report.setEnabled(true);
 				report.setDescription("");
-				report.setPath(new File(reportsDir.getPath(), report.getFileName()));
+				report.setPath(new File(reportsDir.getPath(), report.getSourceFileName()));
 				// TODO: copy pdf to new location
 				addReport(report);
 			}
@@ -171,12 +187,12 @@ public class ReportManager {
 	}
 
 	private void startUnzip(Report report) {
-		reportProcessor.execute(new ReportUnzipRunnable(report));
+		reportProcessor.execute(new ReportUnzipRunnable(report, app));
 	}
 	
 	public Report getReportWithID(String id) {
 		for (Report r : reports) {
-			if (r.getId() != null && r.getId().equals(id)) {
+			if (id.equals(r.getId())) {
 				return r;
 			}
 		}

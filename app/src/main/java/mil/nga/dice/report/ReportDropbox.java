@@ -2,6 +2,7 @@ package mil.nga.dice.report;
 
 import android.app.Service;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.*;
 import android.util.Log;
 
@@ -16,7 +17,7 @@ import java.util.concurrent.*;
 
 public class ReportDropbox extends Service {
 
-    private static final String tag = ReportDropbox.class.getSimpleName();
+    private static final String TAG = ReportDropbox.class.getSimpleName();
 
     private static final Map<Integer, String> fileEventNames = new HashMap<>();
     static {
@@ -45,28 +46,41 @@ public class ReportDropbox extends Service {
         return name;
     }
 
-    private static final long STABILITY_CHECK_INTERVAL = 500;
-    private static final int MAX_STABILITY_CHECKS = 5;
+    private static final long STABILITY_CHECK_INTERVAL = 250;
+    private static final int MIN_STABILITY_CHECKS = 2;
 
 
     private class FileStabilityCheck implements Callable<File> {
         private final File file;
-        private int checkCount = 0;
+        private int stableCount = 0;
+        private long lastModified = 0;
+        private long lastLength = 0;
         private FileStabilityCheck(File file) {
             this.file = file;
+            lastLength = file.length();
+            lastModified = file.lastModified();
         }
         private boolean fileIsStable() {
-            return file.lastModified() < System.currentTimeMillis() - STABILITY_CHECK_INTERVAL;
+            return file.lastModified() == lastModified && file.length() == lastLength;
         }
-        private void schedule() {
+        public void schedule() {
             fileChecking.schedule(this, STABILITY_CHECK_INTERVAL, TimeUnit.MILLISECONDS);
         }
         @Override
         public File call() {
+            // TODO: handle zero-length file gracefully
             if (fileIsStable()) {
-                ReportManager.getInstance().processReports(file);
+                if (++stableCount >= MIN_STABILITY_CHECKS) {
+                    ReportManager.getInstance().processReports(Uri.fromFile(file));
+                }
+                else {
+                    schedule();
+                }
             }
-            else if (++checkCount < MAX_STABILITY_CHECKS) {
+            else {
+                stableCount = 0;
+                lastLength = file.length();
+                lastModified = file.lastModified();
                 schedule();
             }
             return null;
@@ -79,7 +93,7 @@ public class ReportDropbox extends Service {
 
     @Override
     public void onCreate() {
-        Log.i("ReportDropbox", "creating report dropbox");
+        Log.i(TAG, "creating report dropbox");
         dropboxDir = new File(Environment.getExternalStorageDirectory(), "DICE");
         if (!dropboxDir.exists()) {
             dropboxDir.mkdirs();
@@ -91,7 +105,7 @@ public class ReportDropbox extends Service {
                 FileObserver.CREATE | FileObserver.MOVED_TO) {
             @Override
             public void onEvent(int event, String fileName) {
-                Log.i(tag, "file event: " + nameOfFileEvent(event) + "; " + fileName);
+                Log.i(TAG, "file event: " + nameOfFileEvent(event) + "; " + fileName);
                 File reportFile = new File(dropboxDir, fileName);
                 new FileStabilityCheck(reportFile).schedule();
             }
@@ -102,13 +116,11 @@ public class ReportDropbox extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d("ReportDropbox", "starting command " + startId + (intent != null ? "; intent " + intent.toString() : ""));
-        if (intent != null && intent.getDataString() != null) {
-            String reportPath = intent.getDataString();
-            ReportManager.getInstance().processReports(new File(reportPath));
-        }
+        Log.d(TAG, "starting command " + startId + "; intent " + String.valueOf(intent));
+
         dropboxObserver.startWatching();
-        return START_STICKY;
+
+        return START_NOT_STICKY;
     }
 
     @Override
@@ -123,12 +135,17 @@ public class ReportDropbox extends Service {
     }
 
     private void findExistingReports() {
-        ReportManager.getInstance().processReports(dropboxDir.listFiles(new FileFilter() {
+        Log.i(TAG, "finding existing reports in dir " + dropboxDir);
+        File[] existingReports = dropboxDir.listFiles(new FileFilter() {
             @Override
             public boolean accept(File pathname) {
                 return pathname.isFile();
             }
-        }));
+        });
+        for (File reportFile : existingReports) {
+            Log.d(TAG, "found existing potential report " + reportFile);
+            new FileStabilityCheck(reportFile).schedule();
+        }
     }
 
 }

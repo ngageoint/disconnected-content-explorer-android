@@ -2,9 +2,12 @@ package mil.nga.dice;
 
 import android.app.Activity;
 import android.app.Fragment;
+import android.content.ClipData;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.v4.internal.view.SupportMenu;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -18,6 +21,13 @@ import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
 import mil.nga.dice.report.ReportManager;
 
+/**
+ * <h3>TODO:</h3>
+ * <ol>
+ *   <li>add reports using {@link Intent#ACTION_PICK} and/or {@link Intent#ACTION_GET_CONTENT}</li>
+ *   <li>add reports using <a href="http://developer.android.com/guide/topics/providers/document-provider.html">Storage Access Framework</a></li>
+ * </ol>
+ */
 public class ReportCollectionActivity extends Activity implements ReportCollectionCallbacks {
 
     private int currentViewId = 0;
@@ -32,24 +42,44 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
             showListView();
         }
 
-        // TODO: If exposing deep links into your app, handle intents here.
-        /*
-         TODO: is this the right place for this?  what if dice was already
-         in a different activity so this is not called, or launches to a
-         different activity?  should this go in the DICE class?
-        */
-        Uri deepLinkUrl = getIntent().getData();
-        if (deepLinkUrl != null) {
-            Log.i("ReportCollection", "data url: " + deepLinkUrl);
-            String srcScheme = deepLinkUrl.getQueryParameter("srcScheme");
-            String reportId = deepLinkUrl.getQueryParameter("reportID");
-            Report requestedReport = ReportManager.getInstance().getReportWithID(reportId);
-            if (requestedReport != null) {
-                Intent detailIntent = new Intent(this, ReportDetailActivity.class);
-                detailIntent.putExtra("report", requestedReport);
-                startActivity(detailIntent);
+        handleIntentData(getIntent());
+    }
+
+    private void handleIntentData(Intent intent) {
+        Uri uri = intent.getData();
+        if (uri == null) {
+            ClipData clipData = intent.getClipData();
+            if (clipData != null) {
+                if (clipData.getItemCount() > 0) {
+                    ClipData.Item item = clipData.getItemAt(0);
+                    uri = item.getUri();
+                }
             }
         }
+        if (uri == null) {
+            return;
+        }
+        if ("dice".equals(uri.getScheme())) {
+            // TODO: deep linking to specific report: navigateToReport(uri)
+        }
+        else {
+            importReportFromUri(uri);
+        }
+    }
+
+    private void navigateToReport(Uri uri) {
+        String srcScheme = uri.getQueryParameter("srcScheme");
+        String reportId = uri.getQueryParameter("reportID");
+        Report requestedReport = ReportManager.getInstance().getReportWithID(reportId);
+        if (requestedReport != null) {
+            Intent detailIntent = new Intent(this, ReportDetailActivity.class);
+            detailIntent.putExtra("report", requestedReport);
+            startActivity(detailIntent);
+        }
+    }
+
+    private void importReportFromUri(Uri uri) {
+        ReportManager.getInstance().processReports(uri);
     }
 
     @Override
@@ -66,13 +96,29 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_add_content) {
+            Intent getContent = new Intent(Intent.ACTION_GET_CONTENT);
+            getContent.addCategory(Intent.CATEGORY_OPENABLE);
+            getContent.setType("*/*");
+            getContent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+            getContent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+            getContent = Intent.createChooser(getContent, getString(R.string.title_add_content));
+            startActivityForResult(getContent, 0);
+        }
         if (id == R.id.action_about) {
             // TODO: add an about activity
             return true;
         }
 
         return showCollectionViewForOptionItemId(id);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (resultCode != RESULT_OK) {
+            return;
+        }
+        handleIntentData(data);
     }
 
     private boolean showCollectionViewForOptionItemId(int id) {

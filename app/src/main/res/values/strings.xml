@@ -11,5 +11,6 @@
     <string name="show_map">Map View</string>
     <string name="title_activity_report_collection">DICE Reports</string>
     <string name="action_about">About DICE</string>
+    <string name="title_add_content">Add Content</string>
 
 </resources>

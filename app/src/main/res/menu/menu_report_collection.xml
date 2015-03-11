@@ -14,6 +14,10 @@
         android:icon="@drawable/ic_action_map"
         android:title="@string/show_map"
         android:showAsAction="ifRoom"/>
+    <item android:id="@+id/action_add_content"
+        android:icon="@android:drawable/btn_plus"
+        android:title="@string/title_add_content"
+        android:showAsAction="never"/>
     <item android:id="@+id/action_about"
         android:title="@string/action_about"
         android:orderInCategory="100"
