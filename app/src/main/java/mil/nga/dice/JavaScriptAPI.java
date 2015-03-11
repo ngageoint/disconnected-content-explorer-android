@@ -1,62 +1,135 @@
 package mil.nga.dice;
 
+import android.app.Activity;
 import android.content.Context;
+import android.location.Location;
+import android.os.Bundle;
 import android.os.Environment;
-import android.webkit.JavascriptInterface;
-import android.widget.Toast;
+import android.util.Log;
+import android.webkit.WebView;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
 import mil.nga.dice.report.Report;
+import com.fangjian.WebViewJavascriptBridge;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
+import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
+import com.google.android.gms.location.LocationServices;
 
 /**
 
  */
-public class JavaScriptAPI {
-    Context mContext;
+public class JavaScriptAPI implements ConnectionCallbacks, OnConnectionFailedListener {
+    Activity mActivity;
     Report mReport;
+    WebView mWebView;
+    private static final String TAG = "JavaScriptAPI";
     File root = Environment.getExternalStorageDirectory();
     File exportDirectory = new File(root.getPath() + "/DICE/export");
+    WebViewJavascriptBridge bridge;
+    GoogleApiClient mGoogleApiClient;
+    Location mLocation;
 
 
-    public JavaScriptAPI(Context c, Report r) {
-        mContext = c;
+    public JavaScriptAPI(Activity a, Report r, WebView w) {
+        mActivity = a;
         mReport = r;
+        mWebView = w;
+
+        buildGoogleApiClient();
+        mGoogleApiClient.connect();
+
+        Log.i(TAG, "Configuring JavascriptBridge");
+        bridge = new WebViewJavascriptBridge(mActivity, mWebView, new UserServerHandler());
+
+        bridge.registerHandler("getLocation", new WebViewJavascriptBridge.WVJBHandler() {
+            @Override
+            public void handle(String data, WebViewJavascriptBridge.WVJBResponseCallback jsCallback) {
+                Log.i(TAG, "Bridge received a call to getLocation");
+                if (jsCallback != null) {
+                    // get the users location and send it back
+                    jsCallback.callback("{\"success\":\"true\",\"lat\":\""+ mLocation.getLatitude() +"\",\"lon\":\""+ mLocation.getLongitude() +"\"}");
+                }
+            }
+        });
+
+
+        bridge.registerHandler("saveToFile", new WebViewJavascriptBridge.WVJBHandler() {
+            @Override
+            public void handle(String data, WebViewJavascriptBridge.WVJBResponseCallback jsCallback) {
+                Log.i(TAG, "Bridge received a call to export data");
+                if (jsCallback != null) {
+                    File export = new File(exportDirectory.getPath() + "/" + mReport.getTitle() + "_export.json");
+
+                    if (!exportDirectory.exists()) {
+                        exportDirectory.mkdir();
+                    }
+
+                    try {
+                        export.createNewFile();
+                        FileOutputStream fOut = new FileOutputStream(export);
+                        fOut.write(data.getBytes());
+                        fOut.flush();
+                        fOut.close();
+                        jsCallback.callback("{\"success\":\"true\",\"message\":\"Exported your data to the DICE folder on your SD card.\"}");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        jsCallback.callback("{\"success\":\"false\",\"message\":\"There was a problem exporting your data, please try again.\"}");
+                        // TODO: send an error object back through the webview so the user can handle it
+                    }
+                }
+            }
+        });
     }
 
 
-    @JavascriptInterface
-    public void saveToFile(String data) {
+    class UserServerHandler implements WebViewJavascriptBridge.WVJBHandler {
 
-        File export = new File(exportDirectory.getPath() + "/" + mReport.getTitle() + ".txt");
+        @Override
+        public void handle(String data, WebViewJavascriptBridge.WVJBResponseCallback jsCallback) {
+            Log.i(TAG, "DICE Android received a message from Javascript");
+            if (jsCallback != null) {
+                jsCallback.callback("Response from DICE");
+            }
 
-        if (!exportDirectory.exists()) {
-            exportDirectory.mkdir();
+            bridge.send("Hello Javascript", new WebViewJavascriptBridge.WVJBResponseCallback() {
+                @Override
+                public void callback(String responseData) {
+                    Log.i(TAG, "DICE Android Received a response: " + responseData);
+                }
+            });
+            bridge.send("hello");
         }
-
-        try {
-            export.createNewFile();
-            FileOutputStream fOut = new FileOutputStream(export);
-            fOut.write(data.getBytes());
-            fOut.flush();
-            fOut.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-            // TODO: send an error object back through the webview so the user can handle it
-        }
     }
 
 
-    @JavascriptInterface
-    public void showToast(String toast) {
-        Toast.makeText(mContext, toast, Toast.LENGTH_SHORT).show();
+    protected synchronized void buildGoogleApiClient() {
+        mGoogleApiClient = new GoogleApiClient.Builder(mActivity.getApplicationContext())
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API)
+                .build();
     }
 
 
-    @JavascriptInterface
-    public void getLocation() {
+    @Override
+    public void onConnected(Bundle bundle) {
+        mLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+    }
+
+
+    @Override
+    public void onConnectionSuspended(int i) {
+
+    }
+
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
 
     }
 }
