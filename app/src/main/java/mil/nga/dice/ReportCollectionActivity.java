@@ -1,14 +1,10 @@
 package mil.nga.dice;
 
 import android.app.Activity;
-import android.app.Fragment;
 import android.content.ClipData;
-import android.content.ContentResolver;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v4.internal.view.SupportMenu;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -19,6 +15,7 @@ import mil.nga.dice.listview.ReportListFragment;
 import mil.nga.dice.map.ReportMapFragment;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
+import mil.nga.dice.report.ReportDropbox;
 import mil.nga.dice.report.ReportManager;
 
 /**
@@ -29,6 +26,8 @@ import mil.nga.dice.report.ReportManager;
  * </ol>
  */
 public class ReportCollectionActivity extends Activity implements ReportCollectionCallbacks {
+
+    public static final String TAG = "ReportCollection";
 
     private int currentViewId = 0;
 
@@ -79,7 +78,10 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
     }
 
     private void importReportFromUri(Uri uri) {
-        ReportManager.getInstance().processReports(uri);
+        Intent importContent = new Intent(this, ReportDropbox.class);
+        importContent.setAction(ReportDropbox.ACTION_IMPORT);
+        importContent.setData(uri);
+        startService(importContent);
     }
 
     @Override
@@ -119,7 +121,7 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
             return;
         }
         /*
-        TODO: figure out how to handle importing data from other app's content:// uris.
+        TODO: figure out how to handle importing data from other apps' content:// uris.
         maybe just copy the file into the dropbox for now.  copying is necessary for pdf, etc. anyway
          */
         handleIntentData(data);

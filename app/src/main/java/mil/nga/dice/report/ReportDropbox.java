@@ -2,14 +2,26 @@ package mil.nga.dice.report;
 
 import android.app.Service;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.*;
+import android.provider.OpenableColumns;
 import android.util.Log;
 
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.FileFilter;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -19,6 +31,8 @@ public class ReportDropbox extends Service {
 
     private static final String TAG = ReportDropbox.class.getSimpleName();
 
+    private static final long STABILITY_CHECK_INTERVAL = 250;
+    private static final int MIN_STABILITY_CHECKS = 2;
     private static final Map<Integer, String> fileEventNames = new HashMap<>();
     static {
         for (Field f : FileObserver.class.getFields()) {
@@ -46,8 +60,8 @@ public class ReportDropbox extends Service {
         return name;
     }
 
-    private static final long STABILITY_CHECK_INTERVAL = 250;
-    private static final int MIN_STABILITY_CHECKS = 2;
+
+    public static final String ACTION_IMPORT = "mil.nga.giat.dice.ReportDropbox.ACTION_IMPORT";
 
 
     private class FileStabilityCheck implements Callable<File> {
@@ -87,6 +101,71 @@ public class ReportDropbox extends Service {
         }
     }
 
+    private class CopyFileToDropbox extends AsyncTask<Uri, Void, Void> {
+        @Override
+        protected Void doInBackground(Uri... params) {
+            Uri reportUri = params[0];
+            String fileName = reportUri.toString();
+            long fileSize = -1;
+            if ("file".equals(reportUri.getScheme())) {
+                File reportFile = new File(reportUri.getPath());
+                fileName = reportFile.getName();
+            }
+            else if ("content".equals(reportUri.getScheme())) {
+                Cursor reportInfo = getContentResolver().query(reportUri, null, null, null, null);
+                int nameCol = reportInfo.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                int sizeCol = reportInfo.getColumnIndex(OpenableColumns.SIZE);
+                reportInfo.moveToFirst();
+                fileName = reportInfo.getString(nameCol);
+                fileSize = reportInfo.getLong(sizeCol);
+            }
+
+            FileDescriptor fd = null;
+            try {
+                fd = getContentResolver().openFileDescriptor(reportUri, "r").getFileDescriptor();
+            }
+            catch (FileNotFoundException e) {
+                // TODO: user feedback
+                Log.e(TAG, "error opening file descriptor for report uri: " + reportUri, e);
+                return null;
+            }
+
+            File destFile = new File(dropboxDir, fileName);
+            FileChannel source = new FileInputStream(fd).getChannel();
+            FileChannel dest = null;
+            try {
+                dest = new FileOutputStream(destFile).getChannel();
+            }
+            catch (FileNotFoundException e) {
+                // TODO: user feedback
+                Log.e(TAG, "error creating new report file for import: " + destFile, e);
+                return null;
+            }
+
+            try {
+                source.transferTo(0, fileSize, dest);
+            }
+            catch (IOException e) {
+                Log.e(TAG, "error copying report file from " + reportUri + " to " + destFile, e);
+            }
+            finally {
+                try {
+                    source.close();
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    dest.close();
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            return null;
+        }
+    }
+
     private File dropboxDir;
     private FileObserver dropboxObserver;
     private ScheduledExecutorService fileChecking = Executors.newSingleThreadScheduledExecutor();
@@ -120,7 +199,15 @@ public class ReportDropbox extends Service {
 
         dropboxObserver.startWatching();
 
-        return START_NOT_STICKY;
+        if (intent != null && ACTION_IMPORT.equals(intent.getAction())) {
+            copyReportFileFrom(intent.getData());
+        }
+
+        return START_STICKY;
+    }
+
+    private void copyReportFileFrom(Uri reportUri) {
+        new CopyFileToDropbox().executeOnExecutor(fileChecking, reportUri);
     }
 
     @Override
