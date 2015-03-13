@@ -4,7 +4,7 @@
 
     <item android:id="@+id/collection_view_list"
         android:icon="@drawable/ic_action_view_as_list"
-        android:title="@string/show_map"
+        android:title="@string/show_list"
         android:showAsAction="ifRoom"/>
     <item android:id="@+id/collection_view_grid"
         android:icon="@drawable/ic_action_view_as_grid"
@@ -13,6 +13,10 @@
     <item android:id="@+id/collection_view_map"
         android:icon="@drawable/ic_action_map"
         android:title="@string/show_map"
+        android:showAsAction="ifRoom"/>
+    <item android:id="@+id/collection_view_card"
+        android:icon="@drawable/ic_action_view_as_grid"
+        android:title="@string/show_cards"
         android:showAsAction="ifRoom"/>
     <item android:id="@+id/action_about"
         android:title="@string/action_about"

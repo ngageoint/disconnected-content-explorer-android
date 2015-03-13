@@ -1,10 +1,12 @@
 package mil.nga.dice;
 
-import android.app.Activity;
-import android.app.Fragment;
+//import android.app.Activity;
+//import android.app.Fragment;
+import android.support.v4.app.Fragment;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -14,11 +16,12 @@ import java.io.File;
 import mil.nga.dice.gridview.ReportGridFragment;
 import mil.nga.dice.listview.ReportListFragment;
 import mil.nga.dice.map.ReportMapFragment;
+import mil.nga.dice.cardview.CardViewFragment;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
 import mil.nga.dice.report.ReportManager;
 
-public class ReportCollectionActivity extends Activity implements ReportCollectionCallbacks {
+public class ReportCollectionActivity extends ActionBarActivity implements ReportCollectionCallbacks {
 
     private int currentViewId = 0;
 
@@ -91,25 +94,34 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
         else if (id == R.id.collection_view_map) {
             showMapView();
         }
+        else if (id == R.id.collection_view_card) {
+            showCardView();
+        }
 
         return currentViewId == id;
     }
 
     private void showListView() {
-        getFragmentManager().beginTransaction()
+        getSupportFragmentManager().beginTransaction()
                 .replace(R.id.report_collection, new ReportListFragment())
                 .commit();
     }
 
     private void showGridView() {
-        getFragmentManager().beginTransaction()
+        getSupportFragmentManager().beginTransaction()
                 .replace(R.id.report_collection, new ReportGridFragment())
                 .commit();
     }
 
     private void showMapView() {
-        getFragmentManager().beginTransaction()
+        getSupportFragmentManager().beginTransaction()
                 .replace(R.id.report_collection, new ReportMapFragment())
+                .commit();
+    }
+
+    private void showCardView() {
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.report_collection, new CardViewFragment())
                 .commit();
     }
 

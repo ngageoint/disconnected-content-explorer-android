@@ -37,18 +37,21 @@
 	}
 
 	function _dispatchMessageFromJava(messageJSON) {
+			console.log("dispatching message from java");
 			var message = JSON.parse(messageJSON)
 			var messageHandler
 			
 			if (message.responseId) {
 				var responseCallback = responseCallbacks[message.responseId]
 				if (!responseCallback) { return; }
-				responseCallback(message.responseData)
+				console.log("if (message.responseId): Type of message.responseData: " + typeof message.responseData);
+				responseCallback(JSON.parse(message.responseData))
 				delete responseCallbacks[message.responseId]
 			} else {
 				var responseCallback
 				if (message.callbackId) {
 					var callbackResponseId = message.callbackId
+					console.log("else: Type of responseData: " + responseData);
 					responseCallback = function(responseData) {
 						_doSend({ responseId:callbackResponseId, responseData:responseData })
 					}
@@ -59,6 +62,7 @@
 					handler = messageHandlers[message.handlerName]
 				}
 				try {
+				    console.log("try: Type of message.data: " + message.data);
 					handler(message.data, responseCallback)
 				} catch(exception) {
 					if (typeof console != "undefined") {

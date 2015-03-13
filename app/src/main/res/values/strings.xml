@@ -9,6 +9,8 @@
     <string name="save_note">Save</string>
     <string name="show_tiles">Tile View</string>
     <string name="show_map">Map View</string>
+    <string name="show_list">List View</string>
+    <string name="show_cards">Card View</string>
     <string name="title_activity_report_collection">DICE Reports</string>
     <string name="action_about">About DICE</string>
 

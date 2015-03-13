@@ -1,7 +1,6 @@
 package mil.nga.dice.listview;
 
 import android.app.Activity;
-import android.app.ListFragment;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -19,7 +18,7 @@ import mil.nga.dice.report.ReportManager;
  * Activities containing this fragment MUST implement the {@link mil.nga.dice.ReportCollectionCallbacks}
  * interface.
  */
-public class ReportListFragment extends ListFragment {
+public class ReportListFragment extends android.support.v4.app.ListFragment {
 	private CustomList mReportsAdapter;
 	
 	/**
