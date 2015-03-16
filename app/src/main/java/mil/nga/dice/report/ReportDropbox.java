@@ -15,13 +15,9 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -85,7 +81,7 @@ public class ReportDropbox extends Service {
             // TODO: handle zero-length file gracefully
             if (fileIsStable()) {
                 if (++stableCount >= MIN_STABILITY_CHECKS) {
-                    ReportManager.getInstance().processReports(Uri.fromFile(file));
+                    ReportManager.getInstance().importReportFromFile(Uri.fromFile(file));
                 }
                 else {
                     schedule();

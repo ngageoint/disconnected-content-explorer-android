@@ -1,6 +1,7 @@
 package mil.nga.dice.report;
 
 import android.app.Application;
+import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
@@ -28,12 +29,12 @@ public class ReportManager {
 
 	public static class Configuration {
 		private boolean ready = false;
-		private Configuration(Application host) {
-			if (host == null) {
+		private Configuration(Context context) {
+			if (context == null) {
 				throw new IllegalArgumentException("host application cannot be null");
 			}
-			instance.app = host;
-			instance.handler = new Handler(host.getMainLooper());
+			instance.context = context;
+			instance.handler = new Handler(context.getMainLooper());
 		}
 		private boolean isReady() {
 			return ready;
@@ -89,7 +90,7 @@ public class ReportManager {
 	private final List<Report> reports = new ArrayList<>();
 	private final List<Report> reportsView = Collections.unmodifiableList(reports);
 
-	private Application app;
+	private Context context;
 	private File reportsDir;
 	private ThreadPoolExecutor reportProcessor;
 	private Handler handler;
@@ -126,7 +127,7 @@ public class ReportManager {
 			report.setDescription("Problem loading report");
 			break;
 		}
-		LocalBroadcastManager.getInstance(app).sendBroadcast(new Intent(INTENT_UPDATE_REPORT_LIST));
+		LocalBroadcastManager.getInstance(context).sendBroadcast(new Intent(INTENT_UPDATE_REPORT_LIST));
 	}
 
 	/**
@@ -137,63 +138,61 @@ public class ReportManager {
 		return reportsView;
 	}
 	
-	public void processReports(Uri... reports) {
+	public void importReportFromFile(Uri reportUri) {
 		if (reports == null) {
 			throw new IllegalArgumentException("report file is null");
 		}
-		for (Uri reportUri : reports) {
-            String fileName = reportUri.toString();
-            if ("file".equals(reportUri.getScheme())) {
-                File reportFile = new File(reportUri.getPath());
-                fileName = reportFile.getName();
-            }
-            else if ("content".equals(reportUri.getScheme())) {
-                Cursor reportInfo = app.getContentResolver().query(reportUri, null, null, null, null);
-                int nameCol = reportInfo.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                reportInfo.moveToFirst();
-                fileName = reportInfo.getString(nameCol);
-            }
+        String fileName = reportUri.toString();
+        if ("file".equals(reportUri.getScheme())) {
+            File reportFile = new File(reportUri.getPath());
+            fileName = reportFile.getName();
+        }
+        else if ("content".equals(reportUri.getScheme())) {
+            Cursor reportInfo = context.getContentResolver().query(reportUri, null, null, null, null);
+            int nameCol = reportInfo.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+            reportInfo.moveToFirst();
+            fileName = reportInfo.getString(nameCol);
+        }
 
-			String extension = fileName.substring(fileName.lastIndexOf(".") + 1);
-			String simpleName = fileName.substring(0, fileName.lastIndexOf("."));
+        String extension = fileName.substring(fileName.lastIndexOf(".") + 1);
+        String simpleName = fileName.substring(0, fileName.lastIndexOf("."));
 
-			Report report = new Report();
-			report.setSourceFile(reportUri);
-            report.setSourceFileName(fileName);
-			report.setTitle(fileName);
-			report.setDescription("Processing report ...");
-			report.setEnabled(false);
+        Report report = new Report();
+        report.setSourceFile(reportUri);
+        report.setSourceFileName(fileName);
+        report.setTitle(fileName);
+        report.setDescription("Processing report ...");
+        report.setEnabled(false);
 
-            String mimeType = app.getContentResolver().getType(reportUri);
-			if ("application/zip".equals(mimeType) || "zip".equalsIgnoreCase(extension)) {
-				File unzipDir = new File(reportsDir, simpleName);
-				report.setPath(unzipDir);
-				addReport(report);
-				// TODO: need to refactor this to use the threadpool properly
-				startUnzip(report);
-			}
-			else if ("application/pdf".equals(mimeType) || "pdf".equalsIgnoreCase(extension)) {
-			 	// TODO: need to look into more PDF options on android
-				report.setEnabled(true);
-				report.setDescription("");
-				report.setPath(new File(reportsDir.getPath(), report.getSourceFileName()));
-				// TODO: copy pdf to new location
-				addReport(report);
-			}
-			else if (extension.equalsIgnoreCase("docx")) {
-				// TODO: word files
-			}
-			else if (extension.equalsIgnoreCase("pptx")) {
-				// TODO: powerpoint files
-			}
-			else if (extension.equalsIgnoreCase("xlsx")) {
-				// TODO: excel files
-			}
-		}
+        String mimeType = context.getContentResolver().getType(reportUri);
+        if ("application/zip".equals(mimeType) || "zip".equalsIgnoreCase(extension)) {
+            File unzipDir = new File(reportsDir, simpleName);
+            report.setPath(unzipDir);
+            addReport(report);
+            // TODO: need to refactor this to use the threadpool properly
+            startUnzip(report);
+        }
+        else if ("application/pdf".equals(mimeType) || "pdf".equalsIgnoreCase(extension)) {
+            // TODO: need to look into more PDF options on android
+            report.setEnabled(true);
+            report.setDescription("");
+            report.setPath(new File(reportsDir.getPath(), report.getSourceFileName()));
+            // TODO: copy pdf to new location
+            addReport(report);
+        }
+        else if (extension.equalsIgnoreCase("docx")) {
+            // TODO: word files
+        }
+        else if (extension.equalsIgnoreCase("pptx")) {
+            // TODO: powerpoint files
+        }
+        else if (extension.equalsIgnoreCase("xlsx")) {
+            // TODO: excel files
+        }
 	}
 
 	private void startUnzip(Report report) {
-		reportProcessor.execute(new ReportUnzipRunnable(report, app));
+		reportProcessor.execute(new ReportUnzipRunnable(report, context));
 	}
 	
 	public Report getReportWithID(String id) {
@@ -213,7 +212,7 @@ public class ReportManager {
 		@Override
 		public void run() {
 			reports.add(report);
-			LocalBroadcastManager.getInstance(app).sendBroadcastSync(new Intent(INTENT_UPDATE_REPORT_LIST));
+			LocalBroadcastManager.getInstance(context).sendBroadcastSync(new Intent(INTENT_UPDATE_REPORT_LIST));
 		}
 	}
 
