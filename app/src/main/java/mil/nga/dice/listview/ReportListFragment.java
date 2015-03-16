@@ -19,7 +19,7 @@ import mil.nga.dice.report.ReportManager;
  * Activities containing this fragment MUST implement the {@link mil.nga.dice.ReportCollectionCallbacks}
  * interface.
  */
-public class ReportListFragment extends ListFragment implements ReportManager.ReportManagerClient {
+public class ReportListFragment extends ListFragment {
 
 	/**
 	 * The serialization (saved instance state) Bundle key representing the
@@ -34,7 +34,6 @@ public class ReportListFragment extends ListFragment implements ReportManager.Re
 	 */
 	private int mActivatedPosition = ListView.INVALID_POSITION;
     private ReportCollectionCallbacks mCallbacks;
-    private ReportManager reportManager;
 
 
 	/**
@@ -48,6 +47,16 @@ public class ReportListFragment extends ListFragment implements ReportManager.Re
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
+        mReportsAdapter = new CustomList(getActivity(), ReportManager.getInstance().getReports());
+        setListAdapter(mReportsAdapter);
+        LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getActivity().getApplicationContext());
+        bm.registerReceiver(new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                mReportsAdapter.notifyDataSetChanged();
+            }
+        }, new IntentFilter(ReportManager.INTENT_UPDATE_REPORT_LIST));
 	}
 
 
@@ -103,28 +112,6 @@ public class ReportListFragment extends ListFragment implements ReportManager.Re
 			outState.putInt(STATE_ACTIVATED_POSITION, mActivatedPosition);
 		}
 	}
-
-
-    @Override
-    public void reportManagerConnected(ReportManager.Connection x) {
-        reportManager = x.getReportManager();
-
-        mReportsAdapter = new CustomList(getActivity(), reportManager.getReports());
-        setListAdapter(mReportsAdapter);
-        LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getActivity().getApplicationContext());
-        bm.registerReceiver(new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                mReportsAdapter.notifyDataSetChanged();
-            }
-        }, new IntentFilter(ReportManager.INTENT_UPDATE_REPORT_LIST));
-    }
-
-
-    @Override
-    public void reportManagerDisconnected() {
-        reportManager = null;
-    }
 
 
 	private void setActivatedPosition(int position) {

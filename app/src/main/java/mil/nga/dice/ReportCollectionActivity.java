@@ -25,22 +25,17 @@ import mil.nga.dice.report.ReportManager;
  *   <li>add reports using <a href="http://developer.android.com/guide/topics/providers/document-provider.html">Storage Access Framework</a></li>
  * </ol>
  */
-public class ReportCollectionActivity extends Activity implements ReportCollectionCallbacks, ReportManager.ReportManagerClient {
+public class ReportCollectionActivity extends Activity implements ReportCollectionCallbacks {
 
     public static final String TAG = "ReportCollection";
 
 
-    private ReportManager.Connection reportManagerConnection;
     private int currentViewId = 0;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        if (!ReportManager.bindTo(this)) {
-            throw new Error("failed to bind to ReportManager service");
-        }
 
         setContentView(R.layout.activity_report_collection);
 
@@ -57,6 +52,15 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
     }
 
     @Override
+    public void onStart() {
+        super.onStart();
+
+        // TODO: could this possibly be a redundant call wrt onActivityResult(),
+        // like if the OS happens to stop this activity while the user browses for content to add?
+        handleIntentData();
+    }
+
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
@@ -67,6 +71,7 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
             Intent getContent = new Intent(Intent.ACTION_GET_CONTENT);
             getContent.addCategory(Intent.CATEGORY_OPENABLE);
             getContent.setType("*/*");
+            // TODO: test multiple
             getContent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
             getContent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
             getContent = Intent.createChooser(getContent, getString(R.string.title_add_content));
@@ -82,7 +87,7 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
 
     @Override
     public void onDestroy() {
-        unbindService(reportManagerConnection);
+        super.onDestroy();
     }
 
     @Override
@@ -92,22 +97,6 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
         }
 
         handleIntentData();
-    }
-
-    @Override
-    public void reportManagerConnected(ReportManager.Connection x) {
-        reportManagerConnection = x;
-        Fragment collectionView = getFragmentManager().findFragmentById(R.id.report_collection);
-        if (collectionView instanceof ReportManager.ReportManagerClient) {
-            ((ReportManager.ReportManagerClient) collectionView).reportManagerConnected(x);
-        }
-        // now that the report manager is ready, handle any potential data the activity starter is passing
-        handleIntentData();
-    }
-
-    @Override
-    public void reportManagerDisconnected() {
-        reportManagerConnection = null;
     }
 
     @Override
@@ -131,15 +120,6 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
         }
     }
 
-    @Override
-    public void onAttachFragment(Fragment fragment) {
-        super.onAttachFragment(fragment);
-
-        if (fragment instanceof ReportManager.ReportManagerClient && reportManagerConnection != null) {
-            ((ReportManager.ReportManagerClient) fragment).reportManagerConnected(reportManagerConnection);
-        }
-    }
-
     private void handleIntentData() {
         Intent intent = getIntent();
         Uri uri = intent.getData();
@@ -159,7 +139,7 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
             // TODO: deep linking to specific report: navigateToReport(uri)
         }
         else {
-            importReportFromUri(uri);
+            ReportManager.getInstance().importReportFromUri(uri);
         }
     }
 
@@ -167,16 +147,12 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
         String srcScheme = uri.getQueryParameter("srcScheme");
         String reportId = uri.getQueryParameter("reportID");
         // TODO: ensure the report manager is bound first; test the callback sequence
-        Report requestedReport = reportManagerConnection.getReportManager().getReportWithId(reportId);
+        Report requestedReport = ReportManager.getInstance().getReportWithId(reportId);
         if (requestedReport != null) {
             Intent detailIntent = new Intent(this, ReportDetailActivity.class);
             detailIntent.putExtra("report", requestedReport);
             startActivity(detailIntent);
         }
-    }
-
-    private void importReportFromUri(Uri uri) {
-        reportManagerConnection.getReportManager().importReportFromUri(uri);
     }
 
     private boolean showCollectionViewForOptionItemId(int id) {

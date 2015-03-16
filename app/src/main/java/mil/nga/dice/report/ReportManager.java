@@ -43,7 +43,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * TODO: modify to look for content roots in report dir instead of tying to source file
  */
-public class ReportManager extends Service {
+public class ReportManager {
 
     private static final String TAG = ReportManager.class.getSimpleName();
 
@@ -73,42 +73,20 @@ public class ReportManager extends Service {
         }
     }
 
-    private static ReportManager instance;
 
-    public static <T extends Context & ReportManagerClient> boolean bindTo(final T client) {
-        Connection connection = new Connection(client);
-        return client.bindService(new Intent(client, ReportManager.class), connection, 0);
+
+    public static synchronized ReportManager initialize(Context context) {
+        return instance = new ReportManager(context);
     }
 
-    // TODO: delete
     public static ReportManager getInstance() {
+        if (instance == null) {
+            throw new Error("ReportManager has not been properly initialized");
+        }
         return instance;
     }
 
-    public static interface ReportManagerClient {
-        void reportManagerConnected(Connection x);
-        void reportManagerDisconnected();
-    }
-
-    public static final class Connection implements ServiceConnection {
-        private ReportManagerClient client;
-        private LocalBinder binding;
-        private Connection(ReportManagerClient client) {
-            this.client = client;
-        }
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            binding = (LocalBinder)service;
-            client.reportManagerConnected(this);
-        }
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            client.reportManagerDisconnected();
-        }
-        public ReportManager getReportManager() {
-            return binding.getService();
-        }
-    }
+    private static ReportManager instance;
 
     private static String nameOfFileEvent(int event) {
         String name = fileEventNames.get(event);
@@ -136,7 +114,6 @@ public class ReportManager extends Service {
     public static final String INTENT_UPDATE_REPORT_LIST = "mil.nga.giat.dice.ReportManager.UPDATE_REPORT_LIST";
     public static final String ACTION_IMPORT = "mil.nga.giat.dice.ReportManager.ACTION_IMPORT";
 
-    private final LocalBinder localBinder = new LocalBinder();
 	private final List<Report> reports = new ArrayList<>();
 	private final List<Report> reportsView = Collections.unmodifiableList(reports);
 
@@ -147,12 +124,14 @@ public class ReportManager extends Service {
     private ScheduledThreadPoolExecutor reportTasks;
 	private Handler handler;
 
-	public ReportManager() {
+	public ReportManager(Context context) {
         super();
 
         if (instance != null) {
             throw new Error("too many ReportManager instances");
         }
+
+        this.context = context;
 
         final ThreadFactory defaultThreadFactory = Executors.defaultThreadFactory();
         ThreadFactory backgroundThreads = new ThreadFactory() {
@@ -166,20 +145,10 @@ public class ReportManager extends Service {
         reportTasks.setKeepAliveTime(KEEP_ALIVE_TIME_SECONDS, TimeUnit.SECONDS);
 
         handler = new Handler(Looper.getMainLooper());
-	}
-
-    @Override
-    public void onCreate() {
-        Log.i(TAG, "creating report manager");
-        instance = this;
-    }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d(TAG, "starting command " + startId + "; intent " + String.valueOf(intent));
 
         dropboxDir = new File(Environment.getExternalStorageDirectory(), "DICE");
-        reportsDir = dropboxDir; // TODO: separate dir from dropboxDir
+        // TODO: separate reportsDir from dropboxDir to avoid too many FileObserver events
+        reportsDir = dropboxDir;
         if (!reportsDir.exists()) {
             reportsDir.mkdirs();
         }
@@ -205,24 +174,17 @@ public class ReportManager extends Service {
         findExistingReports();
 
         dropboxObserver.startWatching();
+	}
 
-        if (intent != null && ACTION_IMPORT.equals(intent.getAction())) {
-            copyReportFileFrom(intent.getData());
-        }
+    public void destroy() {
+        Log.i(TAG, "destroying ReportManager");
 
-        return START_STICKY;
-    }
-
-    @Override
-    public void onDestroy() {
-        instance = null;
-        dropboxObserver.stopWatching();
         reportTasks.shutdown();
-    }
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        return localBinder;
+        dropboxObserver.stopWatching();
+        dropboxObserver = null;
+        reportTasks = null;
+        handler = null;
+        instance = null;
     }
 
     /**
@@ -246,6 +208,10 @@ public class ReportManager extends Service {
         return reportsDir;
     }
 
+    public File getDropboxDir() {
+        return dropboxDir;
+    }
+
     /**
 	 * Handle sending messages based on the state of a report task.
 	 * @param report
@@ -261,7 +227,7 @@ public class ReportManager extends Service {
 			report.setDescription("Problem loading report");
 			break;
 		}
-		LocalBroadcastManager.getInstance(this).sendBroadcast(new Intent(INTENT_UPDATE_REPORT_LIST));
+		LocalBroadcastManager.getInstance(context).sendBroadcast(new Intent(INTENT_UPDATE_REPORT_LIST));
 	}
 	
 	public void importReportFromUri(Uri reportUri) {
@@ -271,7 +237,7 @@ public class ReportManager extends Service {
             fileName = reportFile.getName();
         }
         else if ("content".equals(reportUri.getScheme())) {
-            Cursor reportInfo = getContentResolver().query(reportUri, null, null, null, null);
+            Cursor reportInfo = context.getContentResolver().query(reportUri, null, null, null, null);
             int nameCol = reportInfo.getColumnIndex(OpenableColumns.DISPLAY_NAME);
             reportInfo.moveToFirst();
             fileName = reportInfo.getString(nameCol);
@@ -287,7 +253,7 @@ public class ReportManager extends Service {
         report.setDescription("Processing report ...");
         report.setEnabled(false);
 
-        String mimeType = getContentResolver().getType(reportUri);
+        String mimeType = context.getContentResolver().getType(reportUri);
         if ("application/zip".equals(mimeType) || "zip".equalsIgnoreCase(extension)) {
             File unzipDir = new File(reportsDir, simpleName);
             report.setPath(unzipDir);
@@ -315,7 +281,7 @@ public class ReportManager extends Service {
 	}
 
 	private void startUnzip(Report report) {
-		reportTasks.execute(new ReportUnzipRunnable(report, this));
+		reportTasks.execute(new ReportUnzipRunnable(report, context));
 	}
 
     private Report getReportWithPath(File path) {
@@ -349,12 +315,6 @@ public class ReportManager extends Service {
         }
     }
 
-    private class LocalBinder extends Binder {
-        public ReportManager getService() {
-            return ReportManager.this;
-        }
-    }
-
 	private class AddReportOnUIThread implements Runnable {
 		private final Report report;
 		private AddReportOnUIThread(Report report) {
@@ -363,7 +323,7 @@ public class ReportManager extends Service {
 		@Override
 		public void run() {
 			reports.add(report);
-			LocalBroadcastManager.getInstance(ReportManager.this).sendBroadcastSync(new Intent(INTENT_UPDATE_REPORT_LIST));
+			LocalBroadcastManager.getInstance(context).sendBroadcastSync(new Intent(INTENT_UPDATE_REPORT_LIST));
 		}
 	}
 
@@ -415,7 +375,7 @@ public class ReportManager extends Service {
                 fileName = reportFile.getName();
             }
             else if ("content".equals(reportUri.getScheme())) {
-                Cursor reportInfo = getContentResolver().query(reportUri, null, null, null, null);
+                Cursor reportInfo = context.getContentResolver().query(reportUri, null, null, null, null);
                 int nameCol = reportInfo.getColumnIndex(OpenableColumns.DISPLAY_NAME);
                 int sizeCol = reportInfo.getColumnIndex(OpenableColumns.SIZE);
                 reportInfo.moveToFirst();
@@ -425,7 +385,7 @@ public class ReportManager extends Service {
 
             FileDescriptor fd = null;
             try {
-                fd = getContentResolver().openFileDescriptor(reportUri, "r").getFileDescriptor();
+                fd = context.getContentResolver().openFileDescriptor(reportUri, "r").getFileDescriptor();
             }
             catch (FileNotFoundException e) {
                 // TODO: user feedback

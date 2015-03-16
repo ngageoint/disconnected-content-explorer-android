@@ -34,15 +34,14 @@ public class DICE extends Application {
         MapsInitializer.initialize(this);
         BackgroundTileProvider.initialize(this);
         OfflineMap.initialize(this);
-
-        Intent reportManager = new Intent(this, ReportManager.class);
-        startService(reportManager);
+        ReportManager.initialize(this);
     }
 
     @Override
     public void onTerminate() {
         super.onTerminate();
-        stopService(new Intent(this, ReportManager.class));
+
+        ReportManager.getInstance().destroy();
     }
 
 }
