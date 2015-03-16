@@ -13,6 +13,7 @@ import android.os.Environment;
 import android.os.FileObserver;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.Process;
 import android.provider.OpenableColumns;
 import android.support.v4.content.LocalBroadcastManager;
@@ -139,6 +140,8 @@ public class ReportManager extends Service {
 	private final List<Report> reports = new ArrayList<>();
 	private final List<Report> reportsView = Collections.unmodifiableList(reports);
 
+	private Context context;
+    private File dropboxDir;
     private File reportsDir;
     private FileObserver dropboxObserver;
     private ScheduledThreadPoolExecutor reportTasks;
@@ -161,6 +164,8 @@ public class ReportManager extends Service {
         reportTasks = new ScheduledThreadPoolExecutor(CORE_POOL_SIZE, backgroundThreads);
         reportTasks.setMaximumPoolSize(MAXIMUM_POOL_SIZE);
         reportTasks.setKeepAliveTime(KEEP_ALIVE_TIME_SECONDS, TimeUnit.SECONDS);
+
+        handler = new Handler(Looper.getMainLooper());
 	}
 
     @Override
@@ -173,21 +178,16 @@ public class ReportManager extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "starting command " + startId + "; intent " + String.valueOf(intent));
 
-
-        String reportsDirStr = intent.getStringExtra(EXTRA_REPORTS_DIR);
-        if (reportsDirStr != null) {
-            reportsDir = new File(reportsDirStr);
-        }
-        else {
-            reportsDir = new File(Environment.getExternalStorageDirectory(), "DICE");
-        }
+        dropboxDir = new File(Environment.getExternalStorageDirectory(), "DICE");
+        reportsDir = dropboxDir; // TODO: separate dir from dropboxDir
         if (!reportsDir.exists()) {
             reportsDir.mkdirs();
         }
         if (!reportsDir.isDirectory()) {
-            throw new RuntimeException("dropbox is not a directory and could not be created: " + reportsDir);
+            throw new RuntimeException("content directory is not a directory or could not be created: " + reportsDir);
         }
-        dropboxObserver = new FileObserver(reportsDir.getAbsolutePath(),
+
+        dropboxObserver = new FileObserver(dropboxDir.getAbsolutePath(),
                 FileObserver.CREATE | FileObserver.MOVED_TO | FileObserver.DELETE | FileObserver.MOVED_FROM) {
             @Override
             public void onEvent(int event, String fileName) {
@@ -201,7 +201,9 @@ public class ReportManager extends Service {
                 }
             }
         };
+
         findExistingReports();
+
         dropboxObserver.startWatching();
 
         if (intent != null && ACTION_IMPORT.equals(intent.getAction())) {
@@ -263,10 +265,6 @@ public class ReportManager extends Service {
 	}
 	
 	public void importReportFromUri(Uri reportUri) {
-		if (reports == null) {
-			throw new IllegalArgumentException("report file is null");
-		}
-
         String fileName = reportUri.toString();
         if ("file".equals(reportUri.getScheme())) {
             File reportFile = new File(reportUri.getPath());
@@ -329,6 +327,10 @@ public class ReportManager extends Service {
         return null;
     }
 
+    private void addReport(Report report) {
+        handler.post(new AddReportOnUIThread(report));
+    }
+
     private void copyReportFileFrom(Uri reportUri) {
         new CopyFileToDropbox().executeOnExecutor(reportTasks, reportUri);
     }
@@ -347,6 +349,12 @@ public class ReportManager extends Service {
         }
     }
 
+    private class LocalBinder extends Binder {
+        public ReportManager getService() {
+            return ReportManager.this;
+        }
+    }
+
 	private class AddReportOnUIThread implements Runnable {
 		private final Report report;
 		private AddReportOnUIThread(Report report) {
@@ -358,16 +366,6 @@ public class ReportManager extends Service {
 			LocalBroadcastManager.getInstance(ReportManager.this).sendBroadcastSync(new Intent(INTENT_UPDATE_REPORT_LIST));
 		}
 	}
-
-	private void addReport(Report report) {
-		handler.post(new AddReportOnUIThread(report));
-	}
-
-    public class LocalBinder extends Binder {
-        public ReportManager getService() {
-            return ReportManager.this;
-        }
-    }
 
     private class FileStabilityCheck implements Callable<File> {
         private final File file;

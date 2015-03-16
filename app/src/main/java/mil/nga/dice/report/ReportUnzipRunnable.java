@@ -90,8 +90,8 @@ public class ReportUnzipRunnable implements Runnable {
 			}
 		}
 		catch (Exception e) {
-			Log.i("ReportUnzipRunnable", "error unzipping report file " +
-					report.getSourceFile() + ": " + e.getLocalizedMessage());
+			Log.e("ReportUnzipRunnable", "error unzipping report file " +
+					report.getSourceFile() + ": " + e.getLocalizedMessage(), e);
 			report.setDescription("Error unzipping report");
 			report.setEnabled(false);
 		}

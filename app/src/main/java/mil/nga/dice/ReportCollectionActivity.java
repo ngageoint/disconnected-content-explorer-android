@@ -1,6 +1,7 @@
 package mil.nga.dice;
 
 import android.app.Activity;
+import android.app.Fragment;
 import android.content.ClipData;
 import android.content.Intent;
 import android.net.Uri;
@@ -49,39 +50,6 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
     }
 
     @Override
-    public void reportManagerConnected(ReportManager.Connection x) {
-        reportManagerConnection = x;
-        // now that the report manager is ready, handle any potential data the activity starter is passing
-        handleIntentData();
-    }
-
-    @Override
-    public void reportManagerDisconnected() {
-        reportManagerConnection = null;
-    }
-
-    @Override
-    public void reportSelectedToView(Report report) {
-        if (!report.isEnabled()) {
-            return;
-        }
-        // TODO: figure out more robust file type handling - what does Android offer?
-        // Start the detail activity for the selected report
-        if (report.getFileExtension().equalsIgnoreCase("zip")) {
-            Intent detailIntent = new Intent(this, ReportDetailActivity.class);
-            detailIntent.putExtra("report", report);
-            startActivity(detailIntent);
-        }
-        else if (report.getFileExtension().equalsIgnoreCase("pdf")) {
-            File file = report.getPath();
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(Uri.fromFile(file), "application/pdf");
-            intent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
-            startActivity(intent);
-        }
-    }
-
-    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_report_collection, menu);
@@ -124,6 +92,52 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
         }
 
         handleIntentData();
+    }
+
+    @Override
+    public void reportManagerConnected(ReportManager.Connection x) {
+        reportManagerConnection = x;
+        Fragment collectionView = getFragmentManager().findFragmentById(R.id.report_collection);
+        if (collectionView instanceof ReportManager.ReportManagerClient) {
+            ((ReportManager.ReportManagerClient) collectionView).reportManagerConnected(x);
+        }
+        // now that the report manager is ready, handle any potential data the activity starter is passing
+        handleIntentData();
+    }
+
+    @Override
+    public void reportManagerDisconnected() {
+        reportManagerConnection = null;
+    }
+
+    @Override
+    public void reportSelectedToView(Report report) {
+        if (!report.isEnabled()) {
+            return;
+        }
+        // TODO: figure out more robust file type handling - what does Android offer?
+        // Start the detail activity for the selected report
+        if (report.getFileExtension().equalsIgnoreCase("zip")) {
+            Intent detailIntent = new Intent(this, ReportDetailActivity.class);
+            detailIntent.putExtra("report", report);
+            startActivity(detailIntent);
+        }
+        else if (report.getFileExtension().equalsIgnoreCase("pdf")) {
+            File file = report.getPath();
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(Uri.fromFile(file), "application/pdf");
+            intent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+            startActivity(intent);
+        }
+    }
+
+    @Override
+    public void onAttachFragment(Fragment fragment) {
+        super.onAttachFragment(fragment);
+
+        if (fragment instanceof ReportManager.ReportManagerClient && reportManagerConnection != null) {
+            ((ReportManager.ReportManagerClient) fragment).reportManagerConnected(reportManagerConnection);
+        }
     }
 
     private void handleIntentData() {

@@ -36,7 +36,6 @@ public class DICE extends Application {
         OfflineMap.initialize(this);
 
         Intent reportManager = new Intent(this, ReportManager.class);
-        reportManager.putExtra(ReportManager.EXTRA_REPORTS_DIR, reportsDir.getAbsolutePath());
         startService(reportManager);
     }
 

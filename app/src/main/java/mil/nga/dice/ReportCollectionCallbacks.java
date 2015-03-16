@@ -6,6 +6,5 @@ import mil.nga.dice.report.Report;
 
 
 public interface ReportCollectionCallbacks {
-    List<Report> getReports();
     void reportSelectedToView(Report report);
 }
