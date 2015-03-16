@@ -30,6 +30,7 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
 
 
     private int currentViewId = 0;
+    private boolean handlingAddContent = false;
 
 
     @Override
@@ -54,9 +55,11 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
     public void onStart() {
         super.onStart();
 
-        // TODO: could this possibly be a redundant call wrt onActivityResult(),
-        // like if the OS happens to stop this activity while the user browses for content to add?
-        handleIntentData();
+        if (!handlingAddContent) {
+            handleIntentData(getIntent());
+        }
+
+        handlingAddContent = false;
     }
 
     @Override
@@ -67,6 +70,7 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
         int id = item.getItemId();
 
         if (id == R.id.action_add_content) {
+            handlingAddContent = true;
             Intent getContent = new Intent(Intent.ACTION_GET_CONTENT);
             getContent.addCategory(Intent.CATEGORY_OPENABLE);
             getContent.setType("*/*");
@@ -95,7 +99,7 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
             return;
         }
 
-        handleIntentData();
+        handleIntentData(data);
     }
 
     @Override
@@ -119,8 +123,7 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
         }
     }
 
-    private void handleIntentData() {
-        Intent intent = getIntent();
+    private void handleIntentData(Intent intent) {
         Uri uri = intent.getData();
         if (uri == null) {
             ClipData clipData = intent.getClipData();
