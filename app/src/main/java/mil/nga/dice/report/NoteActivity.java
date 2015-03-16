@@ -8,16 +8,16 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 
 import mil.nga.dice.R;
-import android.app.Activity;
 import android.os.Bundle;
 import android.os.Environment;
+import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class NoteActivity extends Activity {
+public class NoteActivity extends ActionBarActivity {
 	
 	Report mReport;
 	

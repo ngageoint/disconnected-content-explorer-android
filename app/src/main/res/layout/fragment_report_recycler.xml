@@ -5,4 +5,5 @@
     android:scrollbars="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#aaE5E5E5"/>
+    android:background="#ffE5E5E5"
+    />
