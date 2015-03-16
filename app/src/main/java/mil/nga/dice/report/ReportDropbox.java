@@ -85,7 +85,7 @@ public class ReportDropbox extends Service {
             // TODO: handle zero-length file gracefully
             if (fileIsStable()) {
                 if (++stableCount >= MIN_STABILITY_CHECKS) {
-                    ReportManager.getInstance().processReports(Uri.fromFile(file));
+                    ReportManager.getInstance().importReportFromUri(Uri.fromFile(file));
                 }
                 else {
                     schedule();

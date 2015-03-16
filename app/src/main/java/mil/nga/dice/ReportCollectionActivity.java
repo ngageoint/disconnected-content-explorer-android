@@ -15,7 +15,6 @@ import mil.nga.dice.listview.ReportListFragment;
 import mil.nga.dice.map.ReportMapFragment;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
-import mil.nga.dice.report.ReportDropbox;
 import mil.nga.dice.report.ReportManager;
 
 /**
@@ -25,63 +24,61 @@ import mil.nga.dice.report.ReportManager;
  *   <li>add reports using <a href="http://developer.android.com/guide/topics/providers/document-provider.html">Storage Access Framework</a></li>
  * </ol>
  */
-public class ReportCollectionActivity extends Activity implements ReportCollectionCallbacks {
+public class ReportCollectionActivity extends Activity implements ReportCollectionCallbacks, ReportManager.ReportManagerClient {
 
     public static final String TAG = "ReportCollection";
 
+
+    private ReportManager.Connection reportManagerConnection;
     private int currentViewId = 0;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        if (!ReportManager.bindTo(this)) {
+            throw new Error("failed to bind to ReportManager service");
+        }
 
         setContentView(R.layout.activity_report_collection);
 
         if (savedInstanceState == null) {
             showListView();
         }
-
-        handleIntentData(getIntent());
     }
 
-    private void handleIntentData(Intent intent) {
-        Uri uri = intent.getData();
-        if (uri == null) {
-            ClipData clipData = intent.getClipData();
-            if (clipData != null) {
-                if (clipData.getItemCount() > 0) {
-                    ClipData.Item item = clipData.getItemAt(0);
-                    uri = item.getUri();
-                }
-            }
-        }
-        if (uri == null) {
+    @Override
+    public void reportManagerConnected(ReportManager.Connection x) {
+        reportManagerConnection = x;
+        // now that the report manager is ready, handle any potential data the activity starter is passing
+        handleIntentData();
+    }
+
+    @Override
+    public void reportManagerDisconnected() {
+        reportManagerConnection = null;
+    }
+
+    @Override
+    public void reportSelectedToView(Report report) {
+        if (!report.isEnabled()) {
             return;
         }
-        if ("dice".equals(uri.getScheme())) {
-            // TODO: deep linking to specific report: navigateToReport(uri)
-        }
-        else {
-            importReportFromUri(uri);
-        }
-    }
-
-    private void navigateToReport(Uri uri) {
-        String srcScheme = uri.getQueryParameter("srcScheme");
-        String reportId = uri.getQueryParameter("reportID");
-        Report requestedReport = ReportManager.getInstance().getReportWithID(reportId);
-        if (requestedReport != null) {
+        // TODO: figure out more robust file type handling - what does Android offer?
+        // Start the detail activity for the selected report
+        if (report.getFileExtension().equalsIgnoreCase("zip")) {
             Intent detailIntent = new Intent(this, ReportDetailActivity.class);
-            detailIntent.putExtra("report", requestedReport);
+            detailIntent.putExtra("report", report);
             startActivity(detailIntent);
         }
-    }
-
-    private void importReportFromUri(Uri uri) {
-        Intent importContent = new Intent(this, ReportDropbox.class);
-        importContent.setAction(ReportDropbox.ACTION_IMPORT);
-        importContent.setData(uri);
-        startService(importContent);
+        else if (report.getFileExtension().equalsIgnoreCase("pdf")) {
+            File file = report.getPath();
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(Uri.fromFile(file), "application/pdf");
+            intent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+            startActivity(intent);
+        }
     }
 
     @Override
@@ -116,15 +113,56 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
     }
 
     @Override
+    public void onDestroy() {
+        unbindService(reportManagerConnection);
+    }
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode != RESULT_OK) {
             return;
         }
-        /*
-        TODO: figure out how to handle importing data from other apps' content:// uris.
-        maybe just copy the file into the dropbox for now.  copying is necessary for pdf, etc. anyway
-         */
-        handleIntentData(data);
+
+        handleIntentData();
+    }
+
+    private void handleIntentData() {
+        Intent intent = getIntent();
+        Uri uri = intent.getData();
+        if (uri == null) {
+            ClipData clipData = intent.getClipData();
+            if (clipData != null) {
+                if (clipData.getItemCount() > 0) {
+                    ClipData.Item item = clipData.getItemAt(0);
+                    uri = item.getUri();
+                }
+            }
+        }
+        if (uri == null) {
+            return;
+        }
+        if ("dice".equals(uri.getScheme())) {
+            // TODO: deep linking to specific report: navigateToReport(uri)
+        }
+        else {
+            importReportFromUri(uri);
+        }
+    }
+
+    private void navigateToReport(Uri uri) {
+        String srcScheme = uri.getQueryParameter("srcScheme");
+        String reportId = uri.getQueryParameter("reportID");
+        // TODO: ensure the report manager is bound first; test the callback sequence
+        Report requestedReport = reportManagerConnection.getReportManager().getReportWithId(reportId);
+        if (requestedReport != null) {
+            Intent detailIntent = new Intent(this, ReportDetailActivity.class);
+            detailIntent.putExtra("report", requestedReport);
+            startActivity(detailIntent);
+        }
+    }
+
+    private void importReportFromUri(Uri uri) {
+        reportManagerConnection.getReportManager().importReportFromUri(uri);
     }
 
     private boolean showCollectionViewForOptionItemId(int id) {
@@ -163,27 +201,5 @@ public class ReportCollectionActivity extends Activity implements ReportCollecti
         getFragmentManager().beginTransaction()
                 .replace(R.id.report_collection, new ReportMapFragment())
                 .commit();
-    }
-
-
-    @Override
-    public void reportSelectedToView(Report report) {
-        if (!report.isEnabled()) {
-            return;
-        }
-        // TODO: figure out more robust file type handling - what does Android offer?
-        // Start the detail activity for the selected report
-        if (report.getFileExtension().equalsIgnoreCase("zip")) {
-            Intent detailIntent = new Intent(this, ReportDetailActivity.class);
-            detailIntent.putExtra("report", report);
-            startActivity(detailIntent);
-        }
-        else if (report.getFileExtension().equalsIgnoreCase("pdf")) {
-            File file = report.getPath();
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(Uri.fromFile(file), "application/pdf");
-            intent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
-            startActivity(intent);
-        }
     }
 }

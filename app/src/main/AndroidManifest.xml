@@ -63,7 +63,7 @@
         </activity>
 
         <service
-            android:name=".report.ReportDropbox"
+            android:name=".report.ReportManager"
             android:enabled="true"
             android:exported="false"
             android:isolatedProcess="false"
