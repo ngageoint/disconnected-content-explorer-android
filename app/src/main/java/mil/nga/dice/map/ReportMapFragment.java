@@ -1,6 +1,7 @@
 package mil.nga.dice.map;
 
-import android.app.Fragment;
+//import android.app.Fragment;
+import android.support.v4.app.Fragment;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -34,7 +35,7 @@ import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
 import mil.nga.dice.report.ReportManager;
 
-public class ReportMapFragment extends Fragment implements
+public class ReportMapFragment extends android.support.v4.app.Fragment implements
         OnMapReadyCallback, OnMapClickListener, OnMarkerClickListener,
         OnMapLongClickListener, OnInfoWindowClickListener {
 

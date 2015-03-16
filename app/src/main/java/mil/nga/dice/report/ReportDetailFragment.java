@@ -8,7 +8,6 @@ import android.os.Build;
 import mil.nga.dice.JavaScriptAPI;
 import mil.nga.dice.R;
 import android.annotation.SuppressLint;
-import android.app.Fragment;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -23,7 +22,7 @@ import com.fangjian.WebViewJavascriptBridge;
  * A fragment representing a single Report detail screen. This fragment is
  * either contained in a {@link ReportDetailActivity}.
  */
-public class ReportDetailFragment extends Fragment {
+public class ReportDetailFragment extends android.support.v4.app.Fragment {
 	/**
 	 * The fragment argument representing the item ID that this fragment
 	 * represents.
@@ -31,7 +30,6 @@ public class ReportDetailFragment extends Fragment {
 	public static final String ARG_ITEM_ID = "item_id";
 	public static final String ARG_REPORT = "report";
 	private Report mReport;
-    WebViewJavascriptBridge bridge;
 
 	
 	/**
@@ -67,44 +65,14 @@ public class ReportDetailFragment extends Fragment {
             enableFileAjax(webView);
 
             JavaScriptAPI jsAPI = new JavaScriptAPI(this.getActivity(), mReport, webView);
-
-            /*bridge=new WebViewJavascriptBridge(this.getActivity(),webView,new UserServerHandler());
-            bridge.registerHandler("handler1",new WebViewJavascriptBridge.WVJBHandler() {
-                @Override
-                public void handle(String data, WebViewJavascriptBridge.WVJBResponseCallback jsCallback) {
-                    Log.d("test","handler1 got:"+data);
-                    if(null!=jsCallback){
-                        jsCallback.callback("handler1 answer");
-                    }
-                    bridge.callHandler("showAlert","42");
-                }
-            });*/
-
 			webView.loadUrl("file://"+ reportFile.getPath());
 		}
 		return rootView;
 	}
 
+
 	@TargetApi(Build.VERSION_CODES.JELLY_BEAN)
 	private void enableFileAjax(WebView webView) {
 		webView.getSettings().setAllowFileAccessFromFileURLs(true);
 	}
-
-
-    class UserServerHandler implements WebViewJavascriptBridge.WVJBHandler{
-        @Override
-        public void handle(String data, WebViewJavascriptBridge.WVJBResponseCallback jsCallback) {
-            Log.d("test","Received message from javascript: "+ data);
-            if (null !=jsCallback) {
-                jsCallback.callback("Java said:Right back atcha");
-            }
-            bridge.send("I expect a response!",new WebViewJavascriptBridge.WVJBResponseCallback() {
-                @Override
-                public void callback(String responseData) {
-                    Log.d("test", "Got response! " + responseData);
-                }
-            });
-            bridge.send("Hi");
-        }
-    }
 }

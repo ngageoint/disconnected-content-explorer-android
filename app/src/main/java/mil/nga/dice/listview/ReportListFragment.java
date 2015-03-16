@@ -19,7 +19,7 @@ import mil.nga.dice.report.ReportManager;
  * Activities containing this fragment MUST implement the {@link mil.nga.dice.ReportCollectionCallbacks}
  * interface.
  */
-public class ReportListFragment extends ListFragment {
+public class ReportListFragment extends android.support.v4.app.ListFragment {
 
 	/**
 	 * The serialization (saved instance state) Bundle key representing the

@@ -1,9 +1,9 @@
 package mil.nga.dice.report;
 
 import mil.nga.dice.R;
-import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -12,7 +12,7 @@ import android.view.MenuItem;
  * This activity is mostly just a 'shell' activity containing nothing more than
  * a {@link ReportDetailFragment}.
  */
-public class ReportDetailActivity extends Activity {
+public class ReportDetailActivity extends ActionBarActivity {
 	
 	Report mReport;
 	
@@ -24,10 +24,7 @@ public class ReportDetailActivity extends Activity {
 		Bundle bundle = getIntent().getExtras();
 		mReport = bundle.getParcelable("report");
 		setTitle(mReport.getTitle());
-		
-		// Show the Up button in the action bar.
-		getActionBar().setDisplayHomeAsUpEnabled(true);
-		
+
 		if (savedInstanceState == null) {
 			// Create the detail fragment and add it to the activity
 			// using a fragment transaction.
@@ -36,7 +33,7 @@ public class ReportDetailActivity extends Activity {
 			arguments.putParcelable(ReportDetailFragment.ARG_REPORT, mReport);
 			ReportDetailFragment fragment = new ReportDetailFragment();
 			fragment.setArguments(arguments);
-			getFragmentManager().beginTransaction()
+			getSupportFragmentManager().beginTransaction()
 					.add(R.id.report_detail_container, fragment).commit();
 		}
 	}

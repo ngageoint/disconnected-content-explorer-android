@@ -1,6 +1,5 @@
 package mil.nga.dice.gridview;
 
-import android.app.Fragment;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -17,7 +16,7 @@ import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
 import mil.nga.dice.report.ReportManager;
 
-public class ReportGridFragment extends Fragment implements AdapterView.OnItemClickListener {
+public class ReportGridFragment extends android.support.v4.app.Fragment implements AdapterView.OnItemClickListener {
 
 	public static final String ARG_REPORTS = "reports";
 
