@@ -1,10 +1,21 @@
 package mil.nga.dice;
 
-import android.content.ClipData;
+<<<<<<< HEAD
+//import android.app.Activity;
+//import android.app.Fragment;
+import android.support.v4.app.Fragment;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
+import android.util.Log;
+=======
+import android.app.Activity;
+import android.content.ClipData;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Bundle;
+>>>>>>> b8e111054346d2c0fdd9a8d963b3a4434ee584ea
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -19,6 +30,9 @@ import mil.nga.dice.report.ReportDetailActivity;
 import mil.nga.dice.report.ReportDropbox;
 import mil.nga.dice.report.ReportManager;
 
+<<<<<<< HEAD
+public class ReportCollectionActivity extends ActionBarActivity implements ReportCollectionCallbacks {
+=======
 /**
  * <h3>TODO:</h3>
  * <ol>
@@ -26,7 +40,9 @@ import mil.nga.dice.report.ReportManager;
  *   <li>add reports using <a href="http://developer.android.com/guide/topics/providers/document-provider.html">Storage Access Framework</a></li>
  * </ol>
  */
-public class ReportCollectionActivity extends ActionBarActivity implements ReportCollectionCallbacks {
+public class ReportCollectionActivity extends Activity implements ReportCollectionCallbacks {
+>>>>>>> b8e111054346d2c0fdd9a8d963b3a4434ee584ea
+
     public static final String TAG = "ReportCollection";
 
     private int currentViewId = 0;

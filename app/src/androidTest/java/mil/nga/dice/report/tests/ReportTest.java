@@ -36,7 +36,7 @@ public class ReportTest extends TestCase {
         assertThat(fromParcel.getDescription(), equalTo(r.getDescription()));
         assertThat(fromParcel.getError(), equalTo(r.getError()));
         assertThat(fromParcel.getFileExtension(), equalTo(r.getFileExtension()));
-        assertThat(fromParcel.getFileName(), equalTo(r.getFileName()));
+        assertThat(fromParcel.getSourceFileName(), equalTo(r.getSourceFileName()));
         assertThat(fromParcel.getId(), equalTo(r.getId()));
         assertThat(fromParcel.getLat(), equalTo(r.getLat()));
         assertThat(fromParcel.getLon(), equalTo(r.getLon()));

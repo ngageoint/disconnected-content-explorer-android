@@ -35,13 +35,14 @@ public class DICE extends Application {
         ReportManager.initialize(this)
                 .reportsDir(reportsDir)
                 .finish();
-
-        startService(new Intent(this, ReportDropbox.class));
-
         MapsInitializer.initialize(this);
         BackgroundTileProvider.initialize(this);
         OfflineMap.initialize(this);
+
+        startService(new Intent(this, ReportDropbox.class));
     }
+
+
 
     @Override
     public void onTerminate() {

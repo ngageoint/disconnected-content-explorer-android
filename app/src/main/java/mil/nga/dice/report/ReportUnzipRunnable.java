@@ -1,10 +1,11 @@
 package mil.nga.dice.report;
 
+import android.content.Context;
+import android.net.Uri;
 import android.util.Log;
 import org.json.JSONObject;
 
 import java.io.*;
-import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
@@ -22,10 +23,12 @@ public class ReportUnzipRunnable implements Runnable {
 
 	final ReportManager reportManager = ReportManager.getInstance();
 	final Report report;
+    final Context context;
 
 	
-	ReportUnzipRunnable(Report report) {
+	ReportUnzipRunnable(Report report, Context context) {
 		this.report = report;
+        this.context = context;
 	}
 	
 	/**
@@ -33,7 +36,11 @@ public class ReportUnzipRunnable implements Runnable {
 	 */
 	@Override
 	public void run() {
-		String unzipDirName = report.getFileName().substring(0, report.getFileName().lastIndexOf("."));
+        String unzipDirName = report.getSourceFileName();
+        int dot = unzipDirName.lastIndexOf(".");
+        if (dot > -1) {
+            unzipDirName = report.getSourceFileName().substring(0, dot);
+        }
 		File reportContentRoot = new File(ReportManager.getInstance().getReportsDir(), unzipDirName);
 
 		try {
@@ -93,9 +100,9 @@ public class ReportUnzipRunnable implements Runnable {
 	}
 
 
-	private void unzip(File zipFile, File toDir) throws IOException {
+	private void unzip(Uri zipFile, File toDir) throws IOException {
 		byte[] entryBuffer = new byte[BUFFER_SIZE];
-		ZipInputStream zipIn = new ZipInputStream(new FileInputStream(zipFile));
+		ZipInputStream zipIn = new ZipInputStream(context.getContentResolver().openInputStream(zipFile));
 		try {
 			ZipEntry entry = zipIn.getNextEntry();
 			while (entry != null) {
