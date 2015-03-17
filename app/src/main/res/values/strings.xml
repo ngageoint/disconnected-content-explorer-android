@@ -11,7 +11,7 @@
     <string name="show_map">Map View</string>
     <string name="show_list">List View</string>
     <string name="show_cards">Card View</string>
-    <string name="title_activity_report_collection">DICE Reports</string>
+    <string name="title_activity_report_collection">DICE</string>
     <string name="action_about">About DICE</string>
     <string name="title_add_content">Add Content</string>
 

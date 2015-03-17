@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.WindowManager;
 
 import java.io.File;
 
@@ -40,7 +41,7 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
         setContentView(R.layout.activity_report_collection);
 
         if (savedInstanceState == null) {
-            showListView();
+            showCardView();
         }
     }
 
@@ -164,13 +165,13 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
 
         currentViewId = id;
 
-        if (id == R.id.collection_view_list) {
+        /*if (id == R.id.collection_view_list) {
             showListView();
         }
         else if (id == R.id.collection_view_grid) {
             showGridView();
-        }
-        else if (id == R.id.collection_view_map) {
+        }*/
+        if (id == R.id.collection_view_map) {
             showMapView();
         }
         else if (id == R.id.collection_view_card) {
