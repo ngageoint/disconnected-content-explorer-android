@@ -14,5 +14,7 @@
     <string name="title_activity_report_collection">DICE</string>
     <string name="action_about">About DICE</string>
     <string name="title_add_content">Add Content</string>
+    <string name="import_pending">Importing content...</string>
+    <string name="import_error">Error importing content</string>
 
 </resources>

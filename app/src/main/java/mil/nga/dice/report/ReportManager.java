@@ -1,18 +1,13 @@
 package mil.nga.dice.report;
 
-import android.app.Service;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Binder;
 import android.os.Environment;
 import android.os.FileObserver;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Looper;
 import android.os.Process;
 import android.provider.OpenableColumns;
@@ -30,22 +25,28 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+import mil.nga.dice.R;
+
 /**
  * TODO: modify to look for content roots in report dir instead of tying to source file
  */
-public class ReportManager {
+public class ReportManager implements ReportImportCallbacks {
 
     private static final String TAG = ReportManager.class.getSimpleName();
+
+    private static final String DELETE_DIR_PREFIX = ".deleting.";
 
 	private static final int KEEP_ALIVE_TIME_SECONDS = 1;
 	private static final int CORE_POOL_SIZE = 1;
@@ -73,7 +74,20 @@ public class ReportManager {
         }
     }
 
-
+    private static final Set<String> supportedReportFileTypes;
+    static {
+        Set<String> types = new TreeSet<>(Arrays.asList(new String[] {
+                "zip", "application/zip",
+                "pdf", "application/pdf",
+                "doc",
+                "docx",
+                "xls",
+                "xlsx",
+                "ppt",
+                "pptx"
+        }));
+        supportedReportFileTypes = Collections.unmodifiableSet(types);
+    }
 
     public static synchronized ReportManager initialize(Context context) {
         return instance = new ReportManager(context);
@@ -107,12 +121,7 @@ public class ReportManager {
         }
     }
 
-	static final int LOAD_FAILED = -1;
-	static final int LOAD_COMPLETE = 1;
-
-    public static final String EXTRA_REPORTS_DIR = "reports_dir";
     public static final String INTENT_UPDATE_REPORT_LIST = "mil.nga.giat.dice.ReportManager.UPDATE_REPORT_LIST";
-    public static final String ACTION_IMPORT = "mil.nga.giat.dice.ReportManager.ACTION_IMPORT";
 
 	private final List<Report> reports = new ArrayList<>();
 	private final List<Report> reportsView = Collections.unmodifiableList(reports);
@@ -147,7 +156,7 @@ public class ReportManager {
         handler = new Handler(Looper.getMainLooper());
 
         dropboxDir = new File(Environment.getExternalStorageDirectory(), "DICE");
-        // TODO: separate reportsDir from dropboxDir to avoid too many FileObserver events
+        // TODO: separate reportsDir from dropboxDir to avoid too many FileObserver events and confusion
         reportsDir = dropboxDir;
         if (!reportsDir.exists()) {
             reportsDir.mkdirs();
@@ -156,23 +165,9 @@ public class ReportManager {
             throw new RuntimeException("content directory is not a directory or could not be created: " + reportsDir);
         }
 
-        dropboxObserver = new FileObserver(dropboxDir.getAbsolutePath(),
-                FileObserver.CREATE | FileObserver.MOVED_TO | FileObserver.DELETE | FileObserver.MOVED_FROM) {
-            @Override
-            public void onEvent(int event, String fileName) {
-                Log.i(TAG, "file event: " + nameOfFileEvent(event) + "; " + fileName);
-                File reportFile = new File(reportsDir, fileName);
-                if (event == FileObserver.DELETE || event == FileObserver.MOVED_FROM) {
-                    // TODO: handle deleted report file or dir
-                }
-                else if (event == FileObserver.CREATE || event == FileObserver.MOVED_TO) {
-                    new FileStabilityCheck(reportFile).schedule();
-                }
-            }
-        };
-
         findExistingReports();
 
+        dropboxObserver = new DropboxObserver();
         dropboxObserver.startWatching();
 	}
 
@@ -204,85 +199,175 @@ public class ReportManager {
         return null;
     }
 
-    public File getReportsDir() {
-        return reportsDir;
-    }
-
-    public File getDropboxDir() {
-        return dropboxDir;
-    }
-
     /**
-	 * Handle sending messages based on the state of a report task.
-	 * @param report
-	 * @param state
-	 */
-	public void handleState(Report report, int state) {
-		switch (state) {
-		case LOAD_COMPLETE:
-			report.setEnabled(true);
-			break;
-		case LOAD_FAILED:
-			report.setEnabled(false);
-			report.setDescription("Problem loading report");
-			break;
-		}
-		LocalBroadcastManager.getInstance(context).sendBroadcast(new Intent(INTENT_UPDATE_REPORT_LIST));
-	}
-	
+     * Add a report to DICE from the given {@link android.net.Uri}.  If the Uri points to a zip file, extract it
+     * to the reports directory.  If the Uri points to some other kind of regular file, copy it to the reports
+     * directory if necessary.
+     * {@link android.support.v4.content.LocalBroadcastManager#sendBroadcast(android.content.Intent) broadcast}
+     * a {@link #INTENT_UPDATE_REPORT_LIST} notification.
+     *
+     * @param reportUri
+     */
 	public void importReportFromUri(Uri reportUri) {
+        if (!uriCouldBeReport(reportUri)) {
+            return;
+        }
+        Report report = addNewReportForUri(reportUri);
+        continueImport(report);
+	}
+
+    // TODO: do something with this
+    public void deleteReport(Report report) {
+        File reportPath = report.getPath();
+        if (reportPath.isFile()) {
+            if (!reportPath.delete()) {
+                Log.e(TAG, "failed to delete report file: " + reportPath);
+            }
+        }
+        else if (reportPath.isDirectory()) {
+            File deleteDir = new File(reportPath.getParent(), DELETE_DIR_PREFIX + reportPath.getName());
+            if (!reportPath.renameTo(deleteDir)) {
+                Log.e(TAG, "failed to rename report directory for deleting: " + reportPath);
+            }
+            deleteDirRecursive(deleteDir);
+        }
+    }
+
+    @Override
+    public void percentageComplete(Report report, int percent) {
+        // TODO: broadcast notification
+    }
+
+    @Override
+    public void importComplete(Report report) {
+        report.setEnabled(true);
+        broadcastUpdateReportList();
+    }
+
+    @Override
+    public void importError(Report report) {
+        report.setEnabled(false);
+        report.setDescription(context.getString(R.string.import_error));
+        broadcastUpdateReportList();
+    }
+
+    private void findExistingReports() {
+        // TODO: do on background thread?
+        Log.i(TAG, "finding existing reports in dir " + reportsDir);
+        File[] existingReports = reportsDir.listFiles(new FileFilter() {
+            @Override
+            public boolean accept(File path) {
+                // TODO: check recognized file type
+                return path.isFile() || path.isDirectory();
+            }
+        });
+        for (File reportPath : existingReports) {
+            Log.d(TAG, "found existing potential report: " + reportPath);
+            Uri reportUri = Uri.fromFile(reportPath);
+            if (uriCouldBeReport(reportUri) || pathIsHtmlContentRoot(reportPath)) {
+                Report report = addNewReportForUri(Uri.fromFile(reportPath));
+                if (reportPath.isFile()) {
+                    new CheckReportSourceFileStability(report, reportPath).schedule();
+                }
+                else if (reportPath.isDirectory()) {
+                    report.setPath(reportPath);
+                    ReportDescriptorUtil.readDescriptorAndUpdateReport(report);
+                    report.setEnabled(true);
+                }
+            }
+        }
+    }
+
+    private boolean pathIsHtmlContentRoot(File path) {
+        if (!path.isDirectory()) {
+            return false;
+        }
+        File index = new File(path, "index.html");
+        return index.exists();
+    }
+
+    private boolean uriCouldBeReport(Uri uri) {
+        if (supportedReportFileTypes.contains(extensionOfFile(uri.getPath()))) {
+            return true;
+        }
+        String mimeType = context.getContentResolver().getType(uri);
+        if (mimeType != null) {
+            return supportedReportFileTypes.contains(mimeType);
+        }
+        return false;
+    }
+
+    private String extensionOfFile(String path) {
+        int dot = path.lastIndexOf('.');
+        if (dot < 0) {
+            return "";
+        }
+        return path.substring(dot);
+    }
+
+    private void broadcastUpdateReportList() {
+        LocalBroadcastManager.getInstance(context).sendBroadcast(new Intent(INTENT_UPDATE_REPORT_LIST));
+    }
+
+    private Report addNewReportForUri(Uri reportUri) {
         String fileName = reportUri.toString();
+        long fileSize = -1;
         if ("file".equals(reportUri.getScheme())) {
             File reportFile = new File(reportUri.getPath());
             fileName = reportFile.getName();
+            fileSize = reportFile.length();
         }
         else if ("content".equals(reportUri.getScheme())) {
+            // TODO: test what happens when ADD_CONTENT selects a file from the report dropbox
             Cursor reportInfo = context.getContentResolver().query(reportUri, null, null, null, null);
             int nameCol = reportInfo.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+            int sizeCol = reportInfo.getColumnIndex(OpenableColumns.SIZE);
             reportInfo.moveToFirst();
             fileName = reportInfo.getString(nameCol);
+            fileSize = reportInfo.getLong(sizeCol);
+            reportInfo.close();
         }
-
-        String extension = fileName.substring(fileName.lastIndexOf(".") + 1);
-        String simpleName = fileName.substring(0, fileName.lastIndexOf("."));
 
         Report report = new Report();
         report.setSourceFile(reportUri);
         report.setSourceFileName(fileName);
+        report.setSourceFileSize(fileSize);
         report.setTitle(fileName);
-        report.setDescription("Processing report ...");
+        report.setDescription(context.getString(R.string.import_pending));
         report.setEnabled(false);
 
-        String mimeType = context.getContentResolver().getType(reportUri);
+        handler.post(new AddReportOnUIThread(report));
+
+        return report;
+    }
+
+    /**
+     * Continue the import process after the source file is stabilized by unzipping or
+     * copying it to the reports directory.
+     * @param report
+     */
+    private void continueImport(Report report) {
+        String fileName = report.getSourceFileName();
+        String extension = extensionOfFile(fileName);
+        String mimeType = context.getContentResolver().getType(report.getSourceFile());
+
         if ("application/zip".equals(mimeType) || "zip".equalsIgnoreCase(extension)) {
+            // TODO: delete zip if in dropbox
+            String simpleName = fileName.substring(0, fileName.lastIndexOf("."));
             File unzipDir = new File(reportsDir, simpleName);
             report.setPath(unzipDir);
-            addReport(report);
-            // TODO: need to refactor this to use the threadpool properly
-            startUnzip(report);
+            new UnzipReportSourceFile(report, reportsDir, context, this).executeOnExecutor(reportTasks);
         }
-        else if ("application/pdf".equals(mimeType) || "pdf".equalsIgnoreCase(extension)) {
-            // TODO: need to look into more PDF options on android
-            report.setEnabled(true);
-            report.setDescription("");
-            report.setPath(new File(reportsDir.getPath(), report.getSourceFileName()));
-            // TODO: copy pdf to new location
-            addReport(report);
+        else {
+            File destPath = new File(reportsDir, fileName);
+            if (!destPath.exists()) {
+                // file stability check should be handling this
+                // TODO: unnecessary if dropbox dir and reports dir are separate
+                report.setPath(destPath);
+                new CopyReportSourceFileToReportPath(report).executeOnExecutor(reportTasks);
+            }
         }
-        else if (extension.equalsIgnoreCase("docx")) {
-            // TODO: word files
-        }
-        else if (extension.equalsIgnoreCase("pptx")) {
-            // TODO: powerpoint files
-        }
-        else if (extension.equalsIgnoreCase("xlsx")) {
-            // TODO: excel files
-        }
-	}
-
-	private void startUnzip(Report report) {
-		reportTasks.execute(new ReportUnzipRunnable(report, context));
-	}
+    }
 
     private Report getReportWithPath(File path) {
         for (Report r : reports) {
@@ -293,26 +378,56 @@ public class ReportManager {
         return null;
     }
 
-    private void addReport(Report report) {
-        handler.post(new AddReportOnUIThread(report));
-    }
-
-    private void copyReportFileFrom(Uri reportUri) {
-        new CopyFileToDropbox().executeOnExecutor(reportTasks, reportUri);
-    }
-
-    private void findExistingReports() {
-        Log.i(TAG, "finding existing reports in dir " + reportsDir);
-        File[] existingReports = reportsDir.listFiles(new FileFilter() {
-            @Override
-            public boolean accept(File pathname) {
-                return pathname.isFile();
-            }
-        });
-        for (File reportFile : existingReports) {
-            Log.d(TAG, "found existing potential report " + reportFile);
-            new FileStabilityCheck(reportFile).schedule();
+    private void fileArrivedInDropbox(File file) {
+        // TODO: support copying directory?
+        if (!file.isFile()) {
+            return;
         }
+        // TODO: unnecessary if the dropbox dir and reports dir are different
+        Report report = getReportWithPath(file);
+        if (report == null) {
+            Uri uri = Uri.fromFile(file);
+            if (uriCouldBeReport(uri)) {
+                // not imported yet
+                report = addNewReportForUri(Uri.fromFile(file));
+                new CheckReportSourceFileStability(report, file).schedule();
+            }
+        }
+    }
+
+    /**
+     * After a dropbox file has stabilized, finish importing the file.
+     * @param report
+     */
+    private void sourceFileDidStabilize(Report report) {
+        // waiting for a dropbox file to finish transferring
+        continueImport(report);
+    }
+
+    private void fileRemovedFromDropbox(File file) {
+        // TODO: handle it
+    }
+
+    private boolean deleteDirRecursive(File dir) {
+        for (File child : dir.listFiles()) {
+            if (child.isFile()) {
+                if (!child.delete()) {
+                    Log.e(TAG, "failed to delete file: " + child);
+                    return false;
+                }
+            }
+            else if (child.isDirectory()) {
+                if (!deleteDirRecursive(child)) {
+                    Log.e(TAG, "failed to delete directory recursively: " + child);
+                    return false;
+                }
+            }
+            if (!child.delete()) {
+                Log.e(TAG, "failed to delete empty directory: " + child);
+                return false;
+            }
+        }
+        return true;
     }
 
 	private class AddReportOnUIThread implements Runnable {
@@ -323,32 +438,59 @@ public class ReportManager {
 		@Override
 		public void run() {
 			reports.add(report);
-			LocalBroadcastManager.getInstance(context).sendBroadcastSync(new Intent(INTENT_UPDATE_REPORT_LIST));
+			LocalBroadcastManager.getInstance(context)
+                    .sendBroadcastSync(new Intent(INTENT_UPDATE_REPORT_LIST));
 		}
 	}
 
-    private class FileStabilityCheck implements Callable<File> {
-        private final File file;
+    private class DropboxObserver extends FileObserver {
+
+        public DropboxObserver() {
+            super(dropboxDir.getAbsolutePath(), 0 |
+                    FileObserver.CREATE | FileObserver.MOVED_TO |
+                    FileObserver.DELETE | FileObserver.MOVED_FROM);
+        }
+
+        @Override
+        public void onEvent(int event, String path) {
+            Log.i(TAG, "file event: " + nameOfFileEvent(event) + "; " + path);
+            File reportFile = new File(dropboxDir, path);
+            if (event == FileObserver.DELETE || event == FileObserver.MOVED_FROM) {
+                fileRemovedFromDropbox(reportFile);
+            }
+            else if (event == FileObserver.CREATE || event == FileObserver.MOVED_TO) {
+                fileArrivedInDropbox(reportFile);
+            }
+        }
+    }
+
+    /**
+     * TODO: call {@link #importReportFromUri(android.net.Uri)} immediately when a report file is found and continue normal import after stable
+     */
+    private class CheckReportSourceFileStability implements Runnable {
+        private final Report report;
+        private final File sourceFile;
         private int stableCount = 0;
         private long lastModified = 0;
         private long lastLength = 0;
-        private FileStabilityCheck(File file) {
-            this.file = file;
-            lastLength = file.length();
-            lastModified = file.lastModified();
+        private CheckReportSourceFileStability(Report report, File sourceFile) {
+            this.report = report;
+            this.sourceFile = sourceFile;
+            lastLength = sourceFile.length();
+            lastModified = sourceFile.lastModified();
         }
         private boolean fileIsStable() {
-            return file.lastModified() == lastModified && file.length() == lastLength;
+            return sourceFile.lastModified() == lastModified && sourceFile.length() == lastLength;
         }
         public void schedule() {
             reportTasks.schedule(this, STABILITY_CHECK_INTERVAL, TimeUnit.MILLISECONDS);
         }
         @Override
-        public File call() {
+        public void run() {
             // TODO: handle zero-length file gracefully
             if (fileIsStable()) {
                 if (++stableCount >= MIN_STABILITY_CHECKS) {
-                    importReportFromUri(Uri.fromFile(file));
+                    sourceFileDidStabilize(report);
                 }
                 else {
                     schedule();
@@ -356,60 +498,57 @@ public class ReportManager {
             }
             else {
                 stableCount = 0;
-                lastLength = file.length();
-                lastModified = file.lastModified();
+                lastLength = sourceFile.length();
+                lastModified = sourceFile.lastModified();
                 schedule();
             }
-            return null;
         }
     }
 
-    private class CopyFileToDropbox extends AsyncTask<Uri, Void, Void> {
-        @Override
-        protected Void doInBackground(Uri... params) {
-            Uri reportUri = params[0];
-            String fileName = reportUri.toString();
-            long fileSize = -1;
-            if ("file".equals(reportUri.getScheme())) {
-                File reportFile = new File(reportUri.getPath());
-                fileName = reportFile.getName();
-            }
-            else if ("content".equals(reportUri.getScheme())) {
-                Cursor reportInfo = context.getContentResolver().query(reportUri, null, null, null, null);
-                int nameCol = reportInfo.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                int sizeCol = reportInfo.getColumnIndex(OpenableColumns.SIZE);
-                reportInfo.moveToFirst();
-                fileName = reportInfo.getString(nameCol);
-                fileSize = reportInfo.getLong(sizeCol);
-            }
+    /**
+     * Copy a standalone report file (PDF, MS Word, etc.) to the reports directory.
+     */
+    private class CopyReportSourceFileToReportPath extends AsyncTask<Void, Void, Boolean> {
 
-            FileDescriptor fd = null;
+        private final Report report;
+
+        private CopyReportSourceFileToReportPath(Report report) {
+            this.report = report;
+        }
+
+        @Override
+        protected Boolean doInBackground(Void... params) {
+            FileDescriptor fd;
             try {
-                fd = context.getContentResolver().openFileDescriptor(reportUri, "r").getFileDescriptor();
+                fd = context.getContentResolver().openFileDescriptor(report.getSourceFile(), "r").getFileDescriptor();
             }
             catch (FileNotFoundException e) {
                 // TODO: user feedback
-                Log.e(TAG, "error opening file descriptor for report uri: " + reportUri, e);
-                return null;
+                Log.e(TAG, "error opening file descriptor for report uri: " + report.getSourceFile(), e);
+                return false;
             }
-
-            File destFile = new File(reportsDir, fileName);
             FileChannel source = new FileInputStream(fd).getChannel();
-            FileChannel dest = null;
+
+            // TODO: handle existing file - ask user to overwrite or rename?
+            File destFile = report.getPath();
+            FileChannel dest;
             try {
                 dest = new FileOutputStream(destFile).getChannel();
             }
             catch (FileNotFoundException e) {
                 // TODO: user feedback
                 Log.e(TAG, "error creating new report file for import: " + destFile, e);
-                return null;
+                return false;
             }
 
             try {
-                source.transferTo(0, fileSize, dest);
+                long sourceSize = source.size();
+                long transferred = source.transferTo(0, sourceSize, dest);
+                return transferred == sourceSize;
             }
             catch (IOException e) {
-                Log.e(TAG, "error copying report file from " + reportUri + " to " + destFile, e);
+                Log.e(TAG, "error copying report file from " + report.getSourceFile() + " to " + destFile, e);
+                return false;
             }
             finally {
                 try {
@@ -425,7 +564,18 @@ public class ReportManager {
                     e.printStackTrace();
                 }
             }
-            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Boolean success) {
+            if (success) {
+                report.setDescription("");
+                importComplete(report);
+            }
+            else {
+                importError(report);
+            }
         }
     }
+
 }

@@ -9,6 +9,7 @@ import java.io.File;
 public class Report implements Parcelable {
 	private Uri sourceFile;
     private String sourceFileName;
+    private long sourceFileSize;
 	private File path;
 	private String title;
 	private String description;
@@ -52,6 +53,14 @@ public class Report implements Parcelable {
 
     public void setSourceFileName(String x) {
         sourceFileName = x;
+    }
+
+    public long getSourceFileSize() {
+        return sourceFileSize;
+    }
+
+    public void setSourceFileSize(long x) {
+        sourceFileSize = x;
     }
 
 	public String getTitle() {
@@ -183,6 +192,8 @@ public class Report implements Parcelable {
         else
             parcel.writeValue(null);
 
+        parcel.writeLong(sourceFileSize);
+
         if (thumbnail != null)
 			parcel.writeString(thumbnail);
 		else
@@ -212,6 +223,7 @@ public class Report implements Parcelable {
             }
             report.sourceFile = (Uri) source.readValue(null);
             report.sourceFileName = source.readString();
+            report.sourceFileSize = source.readLong();
 			report.thumbnail = source.readString();
 			report.title = source.readString();
 			return report;
