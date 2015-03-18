@@ -2,17 +2,18 @@ package mil.nga.dice;
 
 import android.content.ClipData;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.WindowManager;
 
 import java.io.File;
 
-import mil.nga.dice.gridview.ReportGridFragment;
-import mil.nga.dice.listview.ReportListFragment;
+import mil.nga.dice.about.DisclaimerDialogFragment;
+import mil.nga.dice.about.LegalDetailsFragment;
 import mil.nga.dice.map.ReportMapFragment;
 import mil.nga.dice.cardview.CardViewFragment;
 import mil.nga.dice.report.Report;
@@ -27,8 +28,9 @@ import mil.nga.dice.report.ReportManager;
  *   <li>add reports using <a href="http://developer.android.com/guide/topics/providers/document-provider.html">Storage Access Framework</a></li>
  * </ol>
  */
-public class ReportCollectionActivity extends ActionBarActivity implements ReportCollectionCallbacks {
+public class ReportCollectionActivity extends ActionBarActivity implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialogDismissedListener {
     public static final String TAG = "ReportCollection";
+    public static final String HIDE_DISCLAIMER_KEY = "hide_disclaimer";
 
     private int currentViewId = 0;
 
@@ -41,6 +43,15 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
         if (savedInstanceState == null) {
             showCardView();
         }
+
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        Boolean showDialog = preferences.getBoolean(HIDE_DISCLAIMER_KEY, true);
+
+        if (showDialog) {
+            DisclaimerDialogFragment dialogFragment = DisclaimerDialogFragment.newInstance();
+            dialogFragment.show(getSupportFragmentManager(), "ReportCollectionActivity");
+        }
+
 
         handleIntentData(getIntent());
     }
@@ -109,7 +120,7 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
             startActivityForResult(getContent, 0);
         }
         if (id == R.id.action_about) {
-            // TODO: add an about activity
+            showAboutView();
             return true;
         }
 
@@ -135,12 +146,6 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
 
         currentViewId = id;
 
-        /*if (id == R.id.collection_view_list) {
-            showListView();
-        }
-        else if (id == R.id.collection_view_grid) {
-            showGridView();
-        }*/
         if (id == R.id.collection_view_map) {
             showMapView();
         }
@@ -151,17 +156,6 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
         return currentViewId == id;
     }
 
-    private void showListView() {
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.report_collection, new ReportListFragment())
-                .commit();
-    }
-
-    private void showGridView() {
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.report_collection, new ReportGridFragment())
-                .commit();
-    }
 
     private void showMapView() {
         getSupportFragmentManager().beginTransaction()
@@ -175,6 +169,12 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
                 .commit();
     }
 
+
+    private void showAboutView() {
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.report_collection, new LegalDetailsFragment())
+                .commit();
+    }
 
     @Override
     public void reportSelectedToView(Report report) {
@@ -194,6 +194,14 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
             intent.setDataAndType(Uri.fromFile(file), "application/pdf");
             intent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
             startActivity(intent);
+        }
+    }
+
+
+    @Override
+    public void onDisclaimerDialogDismissed(boolean exitApplication) {
+        if (exitApplication) {
+            finish();
         }
     }
 }
