@@ -54,13 +54,14 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
         holder.mTitleTextView.setText(report.getTitle());
         holder.mDescriptionTextView.setText(report.getDescription());
 
+        Bitmap bitmap = null;
         if (report.getThumbnail() != null) {
             File image = new File(report.getPath(), report.getThumbnail());
             if (image.exists()) {
-                Bitmap bitmap = BitmapFactory.decodeFile(image.getAbsolutePath());
-                holder.mThumbnailImageView.setImageBitmap(bitmap);
+                bitmap = BitmapFactory.decodeFile(image.getAbsolutePath());
             }
         }
+        holder.mThumbnailImageView.setImageBitmap(bitmap);
     }
 
 
