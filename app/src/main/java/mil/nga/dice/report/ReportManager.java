@@ -147,6 +147,7 @@ public class ReportManager implements ReportImportCallbacks {
         Log.d(TAG, "initializing import thread pool with " + coreThreadCount + " core threads");
         ThreadPoolExecutor executor = new ThreadPoolExecutor(coreThreadCount, coreThreadCount,
                 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), backgroundThreads);
+        executor.allowCoreThreadTimeOut(true);
         importExecutor = executor;
 
         handler = new Handler(Looper.getMainLooper());
