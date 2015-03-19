@@ -2,17 +2,18 @@ package mil.nga.dice;
 
 import android.content.ClipData;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.WindowManager;
 
 import java.io.File;
 
-import mil.nga.dice.gridview.ReportGridFragment;
-import mil.nga.dice.listview.ReportListFragment;
+import mil.nga.dice.about.DisclaimerDialogFragment;
+import mil.nga.dice.about.LegalDetailsFragment;
 import mil.nga.dice.map.ReportMapFragment;
 import mil.nga.dice.cardview.CardViewFragment;
 import mil.nga.dice.report.Report;
@@ -26,8 +27,11 @@ import mil.nga.dice.report.ReportManager;
  *   <li>add reports using <a href="http://developer.android.com/guide/topics/providers/document-provider.html">Storage Access Framework</a></li>
  * </ol>
  */
-public class ReportCollectionActivity extends ActionBarActivity implements ReportCollectionCallbacks {
+public class ReportCollectionActivity extends ActionBarActivity implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialogDismissedListener {
+    
     public static final String TAG = "ReportCollection";
+    
+    public static final String HIDE_DISCLAIMER_KEY = "hide_disclaimer";
 
 
     private int currentViewId = 0;
@@ -44,11 +48,17 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
             showCardView();
         }
 
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        Boolean showDialog = preferences.getBoolean(HIDE_DISCLAIMER_KEY, true);
+
+        if (showDialog) {
+            DisclaimerDialogFragment dialogFragment = DisclaimerDialogFragment.newInstance();
+            dialogFragment.show(getSupportFragmentManager(), "ReportCollectionActivity");
+        }
+
         if (!handlingAddContent) {
             handleIntentData(getIntent());
         }
-
-        handlingAddContent = false;
     }
 
     @Override
@@ -56,11 +66,6 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_report_collection, menu);
         return true;
-    }
-
-    @Override
-    public void onStart() {
-        super.onStart();
     }
 
     @Override
@@ -82,25 +87,11 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
             startActivityForResult(getContent, 0);
         }
         if (id == R.id.action_about) {
-            // TODO: add an about activity
+            showAboutView();
             return true;
         }
 
         return showCollectionViewForOptionItemId(id);
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (resultCode != RESULT_OK) {
-            return;
-        }
-
-        handleIntentData(data);
     }
 
     @Override
@@ -124,6 +115,22 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
         }
     }
 
+    @Override
+    public void onDisclaimerDialogDismissed(boolean exitApplication) {
+        if (exitApplication) {
+            finish();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (resultCode != RESULT_OK) {
+            return;
+        }
+
+        handleIntentData(data);
+    }
+    
     private void handleIntentData(Intent intent) {
         Uri uri = intent.getData();
         if (uri == null) {
@@ -165,12 +172,6 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
 
         currentViewId = id;
 
-        /*if (id == R.id.collection_view_list) {
-            showListView();
-        }
-        else if (id == R.id.collection_view_grid) {
-            showGridView();
-        }*/
         if (id == R.id.collection_view_map) {
             showMapView();
         }
@@ -179,18 +180,6 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
         }
 
         return currentViewId == id;
-    }
-
-    private void showListView() {
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.report_collection, new ReportListFragment())
-                .commit();
-    }
-
-    private void showGridView() {
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.report_collection, new ReportGridFragment())
-                .commit();
     }
 
     private void showMapView() {
@@ -202,6 +191,12 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
     private void showCardView() {
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.report_collection, new CardViewFragment())
+                .commit();
+    }
+
+    private void showAboutView() {
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.report_collection, new LegalDetailsFragment())
                 .commit();
     }
 }
