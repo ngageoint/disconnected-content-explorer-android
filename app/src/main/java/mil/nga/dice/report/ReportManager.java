@@ -32,9 +32,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import mil.nga.dice.R;
@@ -47,10 +50,6 @@ public class ReportManager implements ReportImportCallbacks {
     private static final String TAG = ReportManager.class.getSimpleName();
 
     private static final String DELETE_DIR_PREFIX = ".deleting.";
-
-	private static final int KEEP_ALIVE_TIME_SECONDS = 1;
-	private static final int CORE_POOL_SIZE = 1;
-	private static final int MAXIMUM_POOL_SIZE = 5;
 
     private static final long STABILITY_CHECK_INTERVAL = 250;
     private static final int MIN_STABILITY_CHECKS = 2;
@@ -110,17 +109,6 @@ public class ReportManager implements ReportImportCallbacks {
         return name;
     }
 
-    private static class BackgroundRunnable implements Runnable {
-        private final Runnable target;
-        BackgroundRunnable(Runnable target){
-            this.target = target;
-        }
-        public void run() {
-            Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
-            target.run();
-        }
-    }
-
     public static final String INTENT_UPDATE_REPORT_LIST = "mil.nga.giat.dice.ReportManager.UPDATE_REPORT_LIST";
 
 	private final List<Report> reports = new ArrayList<>();
@@ -130,7 +118,8 @@ public class ReportManager implements ReportImportCallbacks {
     private File dropboxDir;
     private File reportsDir;
     private FileObserver dropboxObserver;
-    private ScheduledThreadPoolExecutor reportTasks;
+    private ScheduledExecutorService scheduledExecutor;
+    private ExecutorService importExecutor;
 	private Handler handler;
 
 	public ReportManager(Context context) {
@@ -142,16 +131,23 @@ public class ReportManager implements ReportImportCallbacks {
 
         this.context = context;
 
+
         final ThreadFactory defaultThreadFactory = Executors.defaultThreadFactory();
         ThreadFactory backgroundThreads = new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
-                return defaultThreadFactory.newThread(new BackgroundRunnable(r));
+                Thread t = defaultThreadFactory.newThread(r);
+                t.setPriority(Process.THREAD_PRIORITY_BACKGROUND);
+                return t;
             }
         };
-        reportTasks = new ScheduledThreadPoolExecutor(CORE_POOL_SIZE, backgroundThreads);
-        reportTasks.setMaximumPoolSize(MAXIMUM_POOL_SIZE);
-        reportTasks.setKeepAliveTime(KEEP_ALIVE_TIME_SECONDS, TimeUnit.SECONDS);
+
+        scheduledExecutor = Executors.newSingleThreadScheduledExecutor(backgroundThreads);
+        int coreThreadCount = Runtime.getRuntime().availableProcessors();
+        Log.d(TAG, "initializing import thread pool with " + coreThreadCount + " core threads");
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(coreThreadCount, coreThreadCount,
+                30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), backgroundThreads);
+        importExecutor = executor;
 
         handler = new Handler(Looper.getMainLooper());
 
@@ -174,10 +170,11 @@ public class ReportManager implements ReportImportCallbacks {
     public void destroy() {
         Log.i(TAG, "destroying ReportManager");
 
-        reportTasks.shutdown();
+        scheduledExecutor.shutdown();
+        importExecutor.shutdown();
         dropboxObserver.stopWatching();
         dropboxObserver = null;
-        reportTasks = null;
+        scheduledExecutor = null;
         handler = null;
         instance = null;
     }
@@ -234,12 +231,14 @@ public class ReportManager implements ReportImportCallbacks {
     }
 
     @Override
-    public void percentageComplete(Report report, int percent) {
-        // TODO: broadcast notification
+    public void importProgressPercentage(Report report, int percent) {
+        report.setDescription(context.getString(R.string.import_pending) + "  " + percent + "%");
+        broadcastUpdateReportList();
     }
 
     @Override
     public void importComplete(Report report) {
+        ReportDescriptorUtil.readDescriptorAndUpdateReport(report);
         report.setEnabled(true);
         broadcastUpdateReportList();
     }
@@ -287,7 +286,8 @@ public class ReportManager implements ReportImportCallbacks {
     }
 
     private boolean uriCouldBeReport(Uri uri) {
-        if (supportedReportFileTypes.contains(extensionOfFile(uri.getPath()))) {
+        String ext = extensionOfFile(uri.getPath()).toLowerCase();
+        if (supportedReportFileTypes.contains(ext)) {
             return true;
         }
         String mimeType = context.getContentResolver().getType(uri);
@@ -299,10 +299,10 @@ public class ReportManager implements ReportImportCallbacks {
 
     private String extensionOfFile(String path) {
         int dot = path.lastIndexOf('.');
-        if (dot < 0) {
+        if (dot < 0 || dot > path.length() - 2) {
             return "";
         }
-        return path.substring(dot);
+        return path.substring(dot + 1);
     }
 
     private void broadcastUpdateReportList() {
@@ -356,7 +356,7 @@ public class ReportManager implements ReportImportCallbacks {
             String simpleName = fileName.substring(0, fileName.lastIndexOf("."));
             File unzipDir = new File(reportsDir, simpleName);
             report.setPath(unzipDir);
-            new UnzipReportSourceFile(report, reportsDir, context, this).executeOnExecutor(reportTasks);
+            new UnzipReportSourceFile(report, reportsDir, context, this).executeOnExecutor(importExecutor);
         }
         else {
             File destPath = new File(reportsDir, fileName);
@@ -364,7 +364,7 @@ public class ReportManager implements ReportImportCallbacks {
                 // file stability check should be handling this
                 // TODO: unnecessary if dropbox dir and reports dir are separate
                 report.setPath(destPath);
-                new CopyReportSourceFileToReportPath(report).executeOnExecutor(reportTasks);
+                new CopyReportSourceFileToReportPath(report).executeOnExecutor(importExecutor);
             }
         }
     }
@@ -400,12 +400,11 @@ public class ReportManager implements ReportImportCallbacks {
      * @param report
      */
     private void sourceFileDidStabilize(Report report) {
-        // waiting for a dropbox file to finish transferring
         continueImport(report);
     }
 
-    private void fileRemovedFromDropbox(File file) {
-        // TODO: handle it
+    private void removeReportFromList(Report report) {
+        handler.post(new RemoveReportOnUIThread(report));
     }
 
     private boolean deleteDirRecursive(File dir) {
@@ -438,10 +437,22 @@ public class ReportManager implements ReportImportCallbacks {
 		@Override
 		public void run() {
 			reports.add(report);
-			LocalBroadcastManager.getInstance(context)
-                    .sendBroadcastSync(new Intent(INTENT_UPDATE_REPORT_LIST));
+			broadcastUpdateReportList();
 		}
 	}
+
+    private class RemoveReportOnUIThread implements Runnable {
+        private final Report report;
+        private RemoveReportOnUIThread(Report report) {
+            this.report = report;
+        }
+        @Override
+        public void run() {
+            if (reports.remove(report)) {
+                broadcastUpdateReportList();
+            }
+        }
+    }
 
     private class DropboxObserver extends FileObserver {
 
@@ -453,10 +464,12 @@ public class ReportManager implements ReportImportCallbacks {
 
         @Override
         public void onEvent(int event, String path) {
+            // because http://stackoverflow.com/a/20609634/969164
+            event &= FileObserver.ALL_EVENTS;
             Log.i(TAG, "file event: " + nameOfFileEvent(event) + "; " + path);
             File reportFile = new File(dropboxDir, path);
             if (event == FileObserver.DELETE || event == FileObserver.MOVED_FROM) {
-                fileRemovedFromDropbox(reportFile);
+                // TODO: something; nothing happens when the app is suspended
             }
             else if (event == FileObserver.CREATE || event == FileObserver.MOVED_TO) {
                 fileArrivedInDropbox(reportFile);
@@ -483,13 +496,14 @@ public class ReportManager implements ReportImportCallbacks {
             return sourceFile.lastModified() == lastModified && sourceFile.length() == lastLength;
         }
         public void schedule() {
-            reportTasks.schedule(this, STABILITY_CHECK_INTERVAL, TimeUnit.MILLISECONDS);
+            scheduledExecutor.schedule(this, STABILITY_CHECK_INTERVAL, TimeUnit.MILLISECONDS);
         }
         @Override
         public void run() {
             // TODO: handle zero-length file gracefully
             if (fileIsStable()) {
                 if (++stableCount >= MIN_STABILITY_CHECKS) {
+                    report.setSourceFileSize(sourceFile.length());
                     sourceFileDidStabilize(report);
                 }
                 else {

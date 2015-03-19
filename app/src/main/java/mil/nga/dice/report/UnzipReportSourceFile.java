@@ -31,6 +31,8 @@ public class UnzipReportSourceFile extends AsyncTask<Void, Integer, Void> {
     private ReportImportCallbacks callbacks;
     private long entryBytesRead = 0;
     private long totalEntryBytes = -1;
+    private int percentComplete = 0;
+    private Exception error = null;
 	
 	public UnzipReportSourceFile(Report report, File destDir, Context context, ReportImportCallbacks callbacks) {
 		this.report = report;
@@ -51,12 +53,10 @@ public class UnzipReportSourceFile extends AsyncTask<Void, Integer, Void> {
 		try {
 			Log.i(TAG, "unzipping report package " + report.getSourceFile());
             unzip();
-            ReportDescriptorUtil.readDescriptorAndUpdateReport(report);
 		}
 		catch (Exception e) {
+            error = e;
 			Log.e(TAG, "error unzipping report file: " + report.getSourceFile(), e);
-			report.setDescription("Error unzipping report");
-			report.setEnabled(false);
 		}
 
         return null;
@@ -64,13 +64,17 @@ public class UnzipReportSourceFile extends AsyncTask<Void, Integer, Void> {
 
     @Override
     protected void onProgressUpdate(Integer... values) {
-        callbacks.percentageComplete(report, values[0]);
+        callbacks.importProgressPercentage(report, values[0]);
     }
 
     @Override
     protected void onPostExecute(Void nothing) {
-        callbacks.importComplete(report);
-
+        if (error == null) {
+            callbacks.importComplete(report);
+        }
+        else {
+            callbacks.importError(report);
+        }
         context = null;
         callbacks = null;
     }
@@ -105,8 +109,9 @@ public class UnzipReportSourceFile extends AsyncTask<Void, Integer, Void> {
 		int read;
 		while ((read = zipIn.read(entryBuffer)) != -1) {
 			entryOut.write(entryBuffer, 0, read);
-            int percentComplete = (int) Math.round((double) entryBytesRead / totalEntryBytes * 100);
-            if (percentComplete % 5 == 0) {
+            int roundedPercent = (int) Math.round((double) entryBytesRead / totalEntryBytes * 100);
+            if (roundedPercent > percentComplete) {
+                percentComplete = roundedPercent;
                 publishProgress(percentComplete);
             }
 		}
