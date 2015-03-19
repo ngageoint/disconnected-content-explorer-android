@@ -43,6 +43,12 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
         if (savedInstanceState == null) {
             showCardView();
         }
+
+        if (!handlingAddContent) {
+            handleIntentData(getIntent());
+        }
+
+        handlingAddContent = false;
     }
 
     @Override
@@ -55,12 +61,6 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
     @Override
     public void onStart() {
         super.onStart();
-
-        if (!handlingAddContent) {
-            handleIntentData(getIntent());
-        }
-
-        handlingAddContent = false;
     }
 
     @Override
