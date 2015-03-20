@@ -37,11 +37,4 @@ public class DICE extends Application {
         ReportManager.initialize(this);
     }
 
-    @Override
-    public void onTerminate() {
-        super.onTerminate();
-
-        ReportManager.getInstance().destroy();
-    }
-
 }
