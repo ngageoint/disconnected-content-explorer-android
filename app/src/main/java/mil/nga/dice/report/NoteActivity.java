@@ -8,8 +8,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 
 import mil.nga.dice.R;
+
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Environment;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -23,6 +26,7 @@ public class NoteActivity extends ActionBarActivity {
 	
 	File root = Environment.getExternalStorageDirectory();
 	File notesDirectory = new File(root.getPath() + "/DICE/notes");
+    public static final String INTENT_REFRESH_CARDS = ReportManager.class.getName() + ".UPDATE_REPORT_LIST";
 	
 	@Override
 	public void onCreate(Bundle savedInstance) {
@@ -36,6 +40,7 @@ public class NoteActivity extends ActionBarActivity {
 		String noteText = readNote(notePath);
 		TextView textView = (TextView)findViewById(R.id.noteTextArea);
 		textView.setText(noteText);
+        setTitle(mReport.getTitle() + " note");
 	}
 
 	
@@ -126,4 +131,11 @@ public class NoteActivity extends ActionBarActivity {
 		
 		return noteText;
 	}
+
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        //LocalBroadcastManager.getInstance(getApplication()).sendBroadcastSync(new Intent(INTENT_UPDATE_REPORT_LIST));
+    }
 }
