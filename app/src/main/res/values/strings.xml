@@ -14,6 +14,8 @@
     <string name="title_activity_report_collection">DICE</string>
     <string name="action_about">About DICE</string>
     <string name="title_add_content">Add Content</string>
+    <string name="import_pending">Importing content...</string>
+    <string name="import_error">Error importing content</string>
     <string name="disclaimer_title_text">Disclaimer</string>
     <string name="disclaimer_text"><![CDATA[
         <h1>Disclaimer:</h1>

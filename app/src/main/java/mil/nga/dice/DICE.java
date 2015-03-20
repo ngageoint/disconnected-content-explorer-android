@@ -7,12 +7,11 @@ import android.util.Log;
 
 import com.google.android.gms.maps.MapsInitializer;
 
+import java.io.File;
+
 import mil.nga.dice.map.BackgroundTileProvider;
 import mil.nga.dice.map.OfflineMap;
-import mil.nga.dice.report.ReportDropbox;
 import mil.nga.dice.report.ReportManager;
-
-import java.io.File;
 
 public class DICE extends Application {
 
@@ -32,22 +31,17 @@ public class DICE extends Application {
 
         Log.i("DICE", "initializing DICE with reports dir " + reportsDir.getAbsolutePath());
 
-        ReportManager.initialize(this)
-                .reportsDir(reportsDir)
-                .finish();
         MapsInitializer.initialize(this);
         BackgroundTileProvider.initialize(this);
         OfflineMap.initialize(this);
-
-        startService(new Intent(this, ReportDropbox.class));
+        ReportManager.initialize(this);
     }
-
-
 
     @Override
     public void onTerminate() {
         super.onTerminate();
-        stopService(new Intent(this, ReportDropbox.class));
+
+        ReportManager.getInstance().destroy();
     }
 
 }

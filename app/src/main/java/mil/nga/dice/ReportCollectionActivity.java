@@ -18,7 +18,6 @@ import mil.nga.dice.map.ReportMapFragment;
 import mil.nga.dice.cardview.CardViewFragment;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
-import mil.nga.dice.report.ReportDropbox;
 import mil.nga.dice.report.ReportManager;
 
 /**
@@ -29,10 +28,15 @@ import mil.nga.dice.report.ReportManager;
  * </ol>
  */
 public class ReportCollectionActivity extends ActionBarActivity implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialogDismissedListener {
+    
     public static final String TAG = "ReportCollection";
+    
     public static final String HIDE_DISCLAIMER_KEY = "hide_disclaimer";
 
+
     private int currentViewId = 0;
+    private boolean handlingAddContent = false;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,48 +56,9 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
             dialogFragment.show(getSupportFragmentManager(), "ReportCollectionActivity");
         }
 
-
-        handleIntentData(getIntent());
-    }
-
-    private void handleIntentData(Intent intent) {
-        Uri uri = intent.getData();
-        if (uri == null) {
-            ClipData clipData = intent.getClipData();
-            if (clipData != null) {
-                if (clipData.getItemCount() > 0) {
-                    ClipData.Item item = clipData.getItemAt(0);
-                    uri = item.getUri();
-                }
-            }
+        if (!handlingAddContent) {
+            handleIntentData(getIntent());
         }
-        if (uri == null) {
-            return;
-        }
-        if ("dice".equals(uri.getScheme())) {
-            // TODO: deep linking to specific report: navigateToReport(uri)
-        }
-        else {
-            importReportFromUri(uri);
-        }
-    }
-
-    private void navigateToReport(Uri uri) {
-        String srcScheme = uri.getQueryParameter("srcScheme");
-        String reportId = uri.getQueryParameter("reportID");
-        Report requestedReport = ReportManager.getInstance().getReportWithID(reportId);
-        if (requestedReport != null) {
-            Intent detailIntent = new Intent(this, ReportDetailActivity.class);
-            detailIntent.putExtra("report", requestedReport);
-            startActivity(detailIntent);
-        }
-    }
-
-    private void importReportFromUri(Uri uri) {
-        Intent importContent = new Intent(this, ReportDropbox.class);
-        importContent.setAction(ReportDropbox.ACTION_IMPORT);
-        importContent.setData(uri);
-        startService(importContent);
     }
 
     @Override
@@ -111,9 +76,11 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
         int id = item.getItemId();
 
         if (id == R.id.action_add_content) {
+            handlingAddContent = true;
             Intent getContent = new Intent(Intent.ACTION_GET_CONTENT);
             getContent.addCategory(Intent.CATEGORY_OPENABLE);
             getContent.setType("*/*");
+            // TODO: test multiple
             getContent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
             getContent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
             getContent = Intent.createChooser(getContent, getString(R.string.title_add_content));
@@ -125,55 +92,6 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
         }
 
         return showCollectionViewForOptionItemId(id);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (resultCode != RESULT_OK) {
-            return;
-        }
-        /*
-        TODO: figure out how to handle importing data from other apps' content:// uris.
-        maybe just copy the file into the dropbox for now.  copying is necessary for pdf, etc. anyway
-         */
-        handleIntentData(data);
-    }
-
-    private boolean showCollectionViewForOptionItemId(int id) {
-        if (id == currentViewId) {
-            return false;
-        }
-
-        currentViewId = id;
-
-        if (id == R.id.collection_view_map) {
-            showMapView();
-        }
-        else if (id == R.id.collection_view_card) {
-            showCardView();
-        }
-
-        return currentViewId == id;
-    }
-
-
-    private void showMapView() {
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.report_collection, new ReportMapFragment())
-                .commit();
-    }
-
-    private void showCardView() {
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.report_collection, new CardViewFragment())
-                .commit();
-    }
-
-
-    private void showAboutView() {
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.report_collection, new LegalDetailsFragment())
-                .commit();
     }
 
     @Override
@@ -197,11 +115,88 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
         }
     }
 
-
     @Override
     public void onDisclaimerDialogDismissed(boolean exitApplication) {
         if (exitApplication) {
             finish();
         }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (resultCode != RESULT_OK) {
+            return;
+        }
+
+        handleIntentData(data);
+    }
+    
+    private void handleIntentData(Intent intent) {
+        Uri uri = intent.getData();
+        if (uri == null) {
+            ClipData clipData = intent.getClipData();
+            if (clipData != null) {
+                if (clipData.getItemCount() > 0) {
+                    ClipData.Item item = clipData.getItemAt(0);
+                    uri = item.getUri();
+                }
+            }
+        }
+        if (uri == null) {
+            return;
+        }
+        if ("dice".equals(uri.getScheme())) {
+            // TODO: deep linking to specific report: navigateToReport(uri)
+        }
+        else {
+            ReportManager.getInstance().importReportFromUri(uri);
+        }
+    }
+
+    private void navigateToReport(Uri uri) {
+        String srcScheme = uri.getQueryParameter("srcScheme");
+        String reportId = uri.getQueryParameter("reportID");
+        // TODO: ensure the report manager is bound first; test the callback sequence
+        Report requestedReport = ReportManager.getInstance().getReportWithId(reportId);
+        if (requestedReport != null) {
+            Intent detailIntent = new Intent(this, ReportDetailActivity.class);
+            detailIntent.putExtra("report", requestedReport);
+            startActivity(detailIntent);
+        }
+    }
+
+    private boolean showCollectionViewForOptionItemId(int id) {
+        if (id == currentViewId) {
+            return false;
+        }
+
+        currentViewId = id;
+
+        if (id == R.id.collection_view_map) {
+            showMapView();
+        }
+        else if (id == R.id.collection_view_card) {
+            showCardView();
+        }
+
+        return currentViewId == id;
+    }
+
+    private void showMapView() {
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.report_collection, new ReportMapFragment())
+                .commit();
+    }
+
+    private void showCardView() {
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.report_collection, new CardViewFragment())
+                .commit();
+    }
+
+    private void showAboutView() {
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.report_collection, new LegalDetailsFragment())
+                .commit();
     }
 }

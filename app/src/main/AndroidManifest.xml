@@ -62,14 +62,6 @@
                 android:value="mil.nga.dice.report.ReportDetailActivity" />
         </activity>
 
-        <service
-            android:name=".report.ReportDropbox"
-            android:enabled="true"
-            android:exported="false"
-            android:isolatedProcess="false"
-            android:label="Report Dropbox">
-        </service>
-
         <meta-data
             android:name="com.google.android.maps.v2.API_KEY"
             android:value="AIzaSyB5b4IowHnB6P_jyl6f0Y1rbfl9DLMaEY4" />
