@@ -23,7 +23,17 @@ import mil.nga.dice.report.ReportManager;
 /**
  * <h3>TODO:</h3>
  * <ol>
- *   <li>add reports using {@link Intent#ACTION_PICK} and/or {@link Intent#ACTION_GET_CONTENT}</li>
+ *   <li>fully test the activity life-cycle and the handling of the intent data for importing reports
+ *     <ul>
+ *       <li>proper life-cycle methods to implement</li>
+ *       <li>when getIntent() returns the expected data</li>
+ *       <li>leaving the activity with the home button</li>
+ *       <li>leaving the activity by the add content action</li>
+ *       <li>entering the activity from another app with the VIEW action</li>
+ *       <li>more ... ?</li>
+ *     </ul>
+ *   </li>
+ *     <li></li>
  *   <li>add reports using <a href="http://developer.android.com/guide/topics/providers/document-provider.html">Storage Access Framework</a></li>
  * </ol>
  */
@@ -107,6 +117,7 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
             startActivity(detailIntent);
         }
         else if (report.getFileExtension().equalsIgnoreCase("pdf")) {
+            // TODO: implement ContentProvider
             File file = report.getPath();
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setDataAndType(Uri.fromFile(file), "application/pdf");
