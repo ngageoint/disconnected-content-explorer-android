@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.v4.content.LocalBroadcastManager;
+import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -39,7 +40,18 @@ public class CardViewFragment extends android.support.v4.app.Fragment {
         final View v = inflater.inflate(R.layout.fragment_report_recycler, container, false);
         mRecyclerView = (RecyclerView) v.findViewById(R.id.report_recycler);
         mRecyclerView.setHasFixedSize(true);
-        mRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
+
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        if (screenWidth < 700) {
+            mLayoutManager = new LinearLayoutManager(getActivity());
+        } else {
+            int columns = 2;
+            if (screenWidth > 900)  {
+                columns = 3;
+            }
+            mLayoutManager = new GridLayoutManager(getActivity(), columns);
+        }
+        mRecyclerView.setLayoutManager(mLayoutManager);
         mRecyclerView.setAdapter(mAdapter);
         return v;
     }
