@@ -88,6 +88,11 @@ public class UnzipReportSourceFile extends AsyncTask<Void, Integer, Void> {
 
 		try {
 			ZipEntry entry = zipIn.getNextEntry();
+            if (entry == null) {
+                // sometimes the zip stream just has no entries when one might think
+                // it would throw an exception, like when unzipping a text file - weird
+                throw new IOException("zip file has no entries: " + report.getSourceFile());
+            }
 			while (entry != null) {
 				File entryFile = new File(destDir, entry.getName());
 				if (entry.isDirectory()) {
