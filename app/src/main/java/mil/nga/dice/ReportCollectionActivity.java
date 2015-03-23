@@ -1,15 +1,11 @@
 package mil.nga.dice;
 
-import android.content.BroadcastReceiver;
 import android.content.ClipData;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
@@ -19,8 +15,8 @@ import java.io.File;
 
 import mil.nga.dice.about.DisclaimerDialogFragment;
 import mil.nga.dice.about.LegalDetailsFragment;
-import mil.nga.dice.map.ReportMapFragment;
 import mil.nga.dice.cardview.CardViewFragment;
+import mil.nga.dice.map.ReportMapFragment;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
 import mil.nga.dice.report.ReportManager;
@@ -53,7 +49,6 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
 
     private int currentViewId = 0;
     private boolean handlingAddContent = false;
-//    private SwipeRefreshLayout swipeToRefresh;
 
 
     @Override
@@ -61,8 +56,6 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_report_collection);
-//        swipeToRefresh = (SwipeRefreshLayout) findViewById(R.id.report_collection_swipe_refresh);
-//        swipeToRefresh.setOnRefreshListener(this);
 
         if (savedInstanceState == null) {
             showCardView();
@@ -77,14 +70,6 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
             DisclaimerDialogFragment dialogFragment = DisclaimerDialogFragment.newInstance();
             dialogFragment.show(getSupportFragmentManager(), "ReportCollectionActivity");
         }
-
-//        LocalBroadcastManager bm = LocalBroadcastManager.getInstance(this);
-//        bm.registerReceiver(new BroadcastReceiver() {
-//            @Override
-//            public void onReceive(Context context, Intent intent) {
-//                swipeToRefresh.setRefreshing(false);
-//            }
-//        }, new IntentFilter(ReportManager.INTENT_END_REFRESH_REPORT_LIST));
 
         // let onActivityResult() do it
         if (!handlingAddContent) {
@@ -161,7 +146,6 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
 
     @Override
     public void onRefresh() {
-//        swipeToRefresh.setRefreshing(true);
         ReportManager.getInstance().refreshReports();
     }
 
