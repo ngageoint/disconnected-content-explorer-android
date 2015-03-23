@@ -149,7 +149,7 @@ public class ReportManager implements ReportImportCallbacks {
         };
 
         scheduledExecutor = Executors.newSingleThreadScheduledExecutor(backgroundThreads);
-        int coreThreadCount = Runtime.getRuntime().availableProcessors();
+        int coreThreadCount = Math.max(Runtime.getRuntime().availableProcessors() - 1, 1);
         Log.d(TAG, "initializing import thread pool with " + coreThreadCount + " core threads");
         ThreadPoolExecutor executor = new ThreadPoolExecutor(coreThreadCount, coreThreadCount,
                 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), backgroundThreads);
@@ -168,8 +168,8 @@ public class ReportManager implements ReportImportCallbacks {
 
         refreshReports();
 
-//        dropboxObserver = new DropboxObserver();
-//        dropboxObserver.startWatching();
+        dropboxObserver = new DropboxObserver();
+        dropboxObserver.startWatching();
 	}
 
     public void destroy() {
@@ -424,22 +424,42 @@ public class ReportManager implements ReportImportCallbacks {
         return null;
     }
 
-    private void fileArrivedInDropbox(File file) {
+    private void fileArrivedInDropbox(final File file) {
         // TODO: support copying directory?
         if (!file.isFile()) {
             return;
         }
         // TODO: unnecessary if the dropbox dir and reports dir are different
-        Report report = getReportWithPath(file);
-        if (report == null) {
-            Uri uri = Uri.fromFile(file);
-            if (uriCouldBeReport(uri)) {
-                // not imported yet
-                report = addNewReportForUri(Uri.fromFile(file));
-                broadcastUpdateReportList();
-                new CheckReportSourceFileStability(report, file).schedule();
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                Report report = getReportWithPath(file);
+                if (report != null) {
+                    return;
+                }
+                Uri uri = Uri.fromFile(file);
+                if (uriCouldBeReport(uri)) {
+                    // not imported yet
+                    report = addNewReportForUri(Uri.fromFile(file));
+                    broadcastUpdateReportList();
+                    new CheckReportSourceFileStability(report, file).schedule();
+                }
             }
-        }
+        });
+    }
+
+    private void fileRemovedFromDropbox(final File file) {
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                Report report = getReportWithPath(file);
+                if (report == null) {
+                    return;
+                }
+                reports.remove(report);
+                broadcastUpdateReportList();
+            }
+        });
     }
 
     /**
@@ -450,10 +470,6 @@ public class ReportManager implements ReportImportCallbacks {
         continueImport(report);
     }
 
-//    private void removeReportFromList(Report report) {
-//        handler.post(new RemoveReportOnUIThread(report));
-//    }
-
     private boolean renameThenDeleteInBackground(final File path) {
         File deletePath = new File(path.getParent(), DELETE_FILE_PREFIX + path.getName());
         if (!path.renameTo(deletePath)) {
@@ -462,19 +478,6 @@ public class ReportManager implements ReportImportCallbacks {
         new DeleteRecursive(deletePath).executeOnExecutor(importExecutor);
         return true;
     }
-
-//    private class RemoveReportOnUIThread implements Runnable {
-//        private final Report report;
-//        private RemoveReportOnUIThread(Report report) {
-//            this.report = report;
-//        }
-//        @Override
-//        public void run() {
-//            if (reports.remove(report)) {
-//                broadcastUpdateReportList();
-//            }
-//        }
-//    }
 
     private class DropboxObserver extends FileObserver {
 
@@ -492,6 +495,7 @@ public class ReportManager implements ReportImportCallbacks {
             File reportFile = new File(reportsDir, path);
             if (event == FileObserver.DELETE || event == FileObserver.MOVED_FROM) {
                 // TODO: something; nothing happens when the app is suspended
+                fileRemovedFromDropbox(reportFile);
             }
             else if (event == FileObserver.CREATE || event == FileObserver.MOVED_TO) {
                 fileArrivedInDropbox(reportFile);

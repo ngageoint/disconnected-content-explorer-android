@@ -63,6 +63,7 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
         setContentView(R.layout.activity_report_collection);
         swipeToRefresh = (SwipeRefreshLayout) findViewById(R.id.report_collection_swipe_refresh);
         swipeToRefresh.setOnRefreshListener(this);
+        swipeToRefresh.setEnabled(false);
 
         if (savedInstanceState == null) {
             showCardView();
