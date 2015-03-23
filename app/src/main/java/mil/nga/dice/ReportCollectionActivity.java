@@ -53,7 +53,7 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
 
     private int currentViewId = 0;
     private boolean handlingAddContent = false;
-    private SwipeRefreshLayout swipeToRefresh;
+//    private SwipeRefreshLayout swipeToRefresh;
 
 
     @Override
@@ -61,8 +61,8 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_report_collection);
-        swipeToRefresh = (SwipeRefreshLayout) findViewById(R.id.report_collection_swipe_refresh);
-        swipeToRefresh.setOnRefreshListener(this);
+//        swipeToRefresh = (SwipeRefreshLayout) findViewById(R.id.report_collection_swipe_refresh);
+//        swipeToRefresh.setOnRefreshListener(this);
 
         if (savedInstanceState == null) {
             showCardView();
@@ -78,13 +78,13 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
             dialogFragment.show(getSupportFragmentManager(), "ReportCollectionActivity");
         }
 
-        LocalBroadcastManager bm = LocalBroadcastManager.getInstance(this);
-        bm.registerReceiver(new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                swipeToRefresh.setRefreshing(false);
-            }
-        }, new IntentFilter(ReportManager.INTENT_END_REFRESH_REPORT_LIST));
+//        LocalBroadcastManager bm = LocalBroadcastManager.getInstance(this);
+//        bm.registerReceiver(new BroadcastReceiver() {
+//            @Override
+//            public void onReceive(Context context, Intent intent) {
+//                swipeToRefresh.setRefreshing(false);
+//            }
+//        }, new IntentFilter(ReportManager.INTENT_END_REFRESH_REPORT_LIST));
 
         // let onActivityResult() do it
         if (!handlingAddContent) {
@@ -161,7 +161,7 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
 
     @Override
     public void onRefresh() {
-        swipeToRefresh.setRefreshing(true);
+//        swipeToRefresh.setRefreshing(true);
         ReportManager.getInstance().refreshReports();
     }
 
