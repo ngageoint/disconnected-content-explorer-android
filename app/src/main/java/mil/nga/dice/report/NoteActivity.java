@@ -85,6 +85,7 @@ public class NoteActivity extends ActionBarActivity {
 			Toast.makeText(getBaseContext(), "Problem saving note", Toast.LENGTH_SHORT).show();
 			e.printStackTrace();
 		}
+        ReportManager.getInstance().refreshReports();
 		finish();
 	}
 
@@ -136,6 +137,6 @@ public class NoteActivity extends ActionBarActivity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        //LocalBroadcastManager.getInstance(getApplication()).sendBroadcastSync(new Intent(INTENT_UPDATE_REPORT_LIST));
+        ReportManager.getInstance().refreshReports();
     }
 }
