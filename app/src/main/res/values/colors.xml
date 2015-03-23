@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#ffd32f2f</color>    <!--material red 700 -->
+    <color name="colorPrimaryDark">#ffb71c1c</color><!--material red 900 -->
+    <color name="colorAccent">#ff757575</color>     <!--material grey 600 -->
+    <color name="buttonColor">#ff536dfe</color>     <!--material indigo A200 -->
+</resources>

@@ -35,11 +35,17 @@
         <p>Privacy Notices</p>
         <p>This Policy may be supplemented or amended from time to time and NGA will notify you by issuing "privacy notices." These Privacy Notices will provide a level of detail describing the changes in our policy and how they may affect you. For example, this App may issue Privacy Notices providing details about changes in the function and use of the PII we collect, and why we need that information.</p>
         <p>Types of Information We Collect</p>
-        <p>NGA will collect NO PII or information from your mobile device. NGA neither collects nor acquires any user names, passwords or other login information or personal information from Apple.</p>
+        <p>NGA will collect NO PII or information from your mobile device. NGA neither collects nor acquires any user names, passwords or other login information or personal information from Google.</p>
         <p>Links to Third-Party Websites</p>
         <p>This App may contain links to websites operated by other organizations. This Policy does not apply to PII collected on any of these third-party websites. When you access third-party websites through a link on this App, please take a few minutes to review the privacy policy posted on that site.</p>
     ]]></string>
     <string name="attributions"><![CDATA[
+        <h1>Questions?</h1>
+        <div>
+            <p>
+                See the DICE project page for more examples and contacts: http://ngageoint.github.io/disconnected-content-explorer-examples/
+            </p>
+        </div>
         <h1>Attributions:</h1>
         <b><a href="https://github.com/marcuswestin/WebViewJavascriptBridge">WebViewJavascriptBridge</a></b>
         <p>
@@ -48,15 +54,11 @@
         <p>
             <a href="WebViewJavascriptBridge-license.html">MIT License</a>
         </p>
-        <p>
-            Sourced from <a href="http://cocoapods.org/?q=webviewjavascriptbridge">CocoaPods</a>
-        </p>
-
         <b>Map Polygons</b>
         <p>Made with <a href="http://www.naturalearthdata.com/">Natural Earth</a> (<a href="http://www.naturalearthdata.com/about/terms-of-use/">public domain</a>)</p>
 
         <b>Material Design Icons</b>
-        <p>All icons are released under an [Attribution-ShareAlike 4.0 International](http://creativecommons.org/licenses/by-sa/4.0/) license.</p>
+        <p>All icons are used under an Attribution-ShareAlike 4.0 International license http://creativecommons.org/licenses/by-sa/4.0/ .</p>
 
         <b>Icons used in the app icon</b>
         <ul>

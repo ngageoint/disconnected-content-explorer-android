@@ -1,35 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<android.support.v7.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:card_view="http://schemas.android.com/apk/res-auto"
-    android:orientation="horizontal"
-    android:layout_height="125dp"
-    android:layout_width="fill_parent"
-    android:padding="5dp"
-    android:paddingRight="8dp">
+    android:id="@+id/card_view"
+    android:layout_gravity="center"
+    android:layout_width="380dp"
+    android:layout_height="330dp"
+    android:padding="8dp"
+    android:layout_margin="8dp"
+    android:foreground="?android:attr/selectableItemBackground"
+    android:background="@drawable/cardrect"
+    card_view:cardCornerRadius="@dimen/cardview_default_radius"
+    card_view:cardElevation="3dp">
 
-    <android.support.v7.widget.CardView
-        xmlns:card_view="http://schemas.android.com/apk/res-auto"
-        android:id="@+id/card_view"
-        android:layout_gravity="center"
-        android:layout_width="fill_parent"
-        android:layout_height="120dp"
-        android:foreground="?android:attr/selectableItemBackground"
-        android:background="@drawable/cardrect"
-        card_view:cardCornerRadius="@dimen/cardview_default_radius"
-        card_view:cardElevation="3dp">
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_height="match_parent"
+        android:layout_width="match_parent">
 
         <ImageView
             android:id="@+id/card_thumbnail"
-            android:layout_width="110dp"
-            android:layout_height="110dp"/>
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:scaleType="centerCrop"/>
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="110dp"
             android:orientation="vertical"
-            android:layout_marginLeft="126dp"
             android:layout_marginTop="16dp"
-            android:layout_toRightOf="@+id/card_thumbnail">
+            android:layout_marginLeft="16dp"
+            android:layout_below="@+id/card_thumbnail">
 
             <TextView
                 android:id="@+id/card_title"
@@ -58,5 +59,5 @@
                 android:textColor="@color/buttonColor"
                 style="?android:attr/borderlessButtonStyle"/>
         </LinearLayout>
-    </android.support.v7.widget.CardView>
-</LinearLayout>
+    </LinearLayout>
+</android.support.v7.widget.CardView>

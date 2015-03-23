@@ -6,9 +6,9 @@
         by AppBaseTheme from res/values-vXX/styles.xml on newer devices.
     -->
     <style name="AppBaseTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <item name="colorPrimary">#ffd32f2f</item>
-        <item name="colorPrimaryDark">#ffb71c1c</item>
-        <item name="colorAccent">#ff757575</item>
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
     </style>
 
     <!-- Application theme. -->

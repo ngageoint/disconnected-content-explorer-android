@@ -5,10 +5,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.Environment;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -16,6 +18,7 @@ import java.io.File;
 import java.util.List;
 
 import mil.nga.dice.R;
+import mil.nga.dice.report.NoteActivity;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
 
@@ -24,6 +27,9 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
     private List<Report> reports;
     private static LayoutInflater inflater = null;
     private static Activity activity;
+    File root = Environment.getExternalStorageDirectory();
+    File notesDirectory = new File(root.getPath() + "/DICE/notes");
+
 
     public CardAdapter(Activity activity, List<Report> reports) {
         this.reports = reports;
@@ -63,6 +69,11 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
         }
         holder.mThumbnailImageView.setImageBitmap(bitmap);
 
+        File note = new File(notesDirectory.getPath(), report.getTitle() + ".txt");
+        if (!note.exists()) {
+            holder.mButton.setVisibility(View.INVISIBLE);
+        }
+
         holder.itemView.setEnabled(holder.mReport != null && holder.mReport.isEnabled());
     }
 
@@ -72,12 +83,21 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
         public ImageView mThumbnailImageView;
         public TextView mTitleTextView;
         public TextView mDescriptionTextView;
+        public Button mButton;
 
         public ViewHolder(View v) {
             super(v);
             mThumbnailImageView = (ImageView) v.findViewById(R.id.card_thumbnail);
             mTitleTextView = (TextView) v.findViewById(R.id.card_title);
             mDescriptionTextView = (TextView) v.findViewById(R.id.card_description);
+            mButton = (Button) v.findViewById(R.id.view_note_button);
+            mButton.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View view) {
+                    Intent noteIntent = new Intent(activity, NoteActivity.class);
+                    noteIntent.putExtra("report", mReport);
+                    activity.startActivity(noteIntent);
+                }
+            });
             v.setOnClickListener(this);
         }
 
