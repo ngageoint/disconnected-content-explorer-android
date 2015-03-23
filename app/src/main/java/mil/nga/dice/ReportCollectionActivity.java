@@ -229,6 +229,8 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
     }
 
     private void showAboutView() {
+        currentViewId = -1;
+        
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.report_collection, new LegalDetailsFragment())
                 .commit();
