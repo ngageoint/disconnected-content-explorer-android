@@ -168,8 +168,8 @@ public class ReportManager implements ReportImportCallbacks {
 
         refreshReports();
 
-        dropboxObserver = new DropboxObserver();
-        dropboxObserver.startWatching();
+//        dropboxObserver = new DropboxObserver();
+//        dropboxObserver.startWatching();
 	}
 
     public void destroy() {
