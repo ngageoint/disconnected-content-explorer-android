@@ -49,6 +49,7 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
     
     public static final String HIDE_DISCLAIMER_KEY = "hide_disclaimer";
 
+    private static Boolean showDisclaimer = null;
 
     private int currentViewId = 0;
     private boolean handlingAddContent = false;
@@ -67,10 +68,12 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
             showCardView();
         }
 
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        Boolean showDialog = preferences.getBoolean(HIDE_DISCLAIMER_KEY, true);
-
-        if (showDialog) {
+        if (showDisclaimer == null) {
+            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+            showDisclaimer = preferences.getBoolean(HIDE_DISCLAIMER_KEY, true);
+        }
+        if (showDisclaimer) {
+            showDisclaimer = false;
             DisclaimerDialogFragment dialogFragment = DisclaimerDialogFragment.newInstance();
             dialogFragment.show(getSupportFragmentManager(), "ReportCollectionActivity");
         }
@@ -87,6 +90,13 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
         if (!handlingAddContent) {
             handleIntentData(getIntent());
         }
+    }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+
+        ReportManager.getInstance().refreshReports();
     }
 
     @Override
