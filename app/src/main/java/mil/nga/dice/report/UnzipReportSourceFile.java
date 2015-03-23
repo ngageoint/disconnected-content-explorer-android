@@ -73,6 +73,7 @@ public class UnzipReportSourceFile extends AsyncTask<Void, Integer, Void> {
             callbacks.importComplete(report);
         }
         else {
+            report.setError(error.getMessage());
             callbacks.importError(report);
         }
         context = null;

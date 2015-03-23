@@ -190,7 +190,6 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
     private void navigateToReport(Uri uri) {
         String srcScheme = uri.getQueryParameter("srcScheme");
         String reportId = uri.getQueryParameter("reportID");
-        // TODO: ensure the report manager is bound first; test the callback sequence
         Report requestedReport = ReportManager.getInstance().getReportWithId(reportId);
         if (requestedReport != null) {
             Intent detailIntent = new Intent(this, ReportDetailActivity.class);
@@ -230,7 +229,7 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
 
     private void showAboutView() {
         currentViewId = -1;
-        
+
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.report_collection, new LegalDetailsFragment())
                 .commit();
