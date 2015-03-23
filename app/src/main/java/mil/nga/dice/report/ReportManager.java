@@ -21,16 +21,12 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
@@ -57,25 +53,6 @@ public class ReportManager implements ReportImportCallbacks {
 
     private static final long STABILITY_CHECK_INTERVAL = 250;
     private static final int MIN_STABILITY_CHECKS = 2;
-
-    private static final Map<Integer, String> fileEventNames = new HashMap<>();
-    static {
-        for (Field f : FileObserver.class.getFields()) {
-            if (
-                    Modifier.isStatic(f.getModifiers()) &&
-                            Modifier.isPublic(f.getModifiers()) &&
-                            Modifier.isFinal(f.getModifiers()) &&
-                            int.class.equals(f.getType()))
-            {
-                try {
-                    fileEventNames.put(f.getInt(FileObserver.class), f.getName());
-                }
-                catch (Exception e) {
-                    throw new Error("unexpected error populating file event names", e);
-                }
-            }
-        }
-    }
 
     private static final Set<String> supportedReportFileTypes;
     static {
@@ -109,14 +86,6 @@ public class ReportManager implements ReportImportCallbacks {
         if (Looper.getMainLooper() != Looper.myLooper()) {
             throw new Error("not on ui thread!");
         }
-    }
-
-    private static String nameOfFileEvent(int event) {
-        String name = fileEventNames.get(event);
-        if (name == null) {
-            name = String.valueOf(event);
-        }
-        return name;
     }
 
 	private final List<Report> reports = new ArrayList<>();
@@ -167,9 +136,6 @@ public class ReportManager implements ReportImportCallbacks {
         }
 
         refreshReports();
-
-        dropboxObserver = new DropboxObserver();
-        dropboxObserver.startWatching();
 	}
 
     public void destroy() {
@@ -477,30 +443,6 @@ public class ReportManager implements ReportImportCallbacks {
         }
         new DeleteRecursive(deletePath).executeOnExecutor(importExecutor);
         return true;
-    }
-
-    private class DropboxObserver extends FileObserver {
-
-        public DropboxObserver() {
-            super(reportsDir.getAbsolutePath(), 0 |
-                    FileObserver.CREATE | FileObserver.MOVED_TO |
-                    FileObserver.DELETE | FileObserver.MOVED_FROM);
-        }
-
-        @Override
-        public void onEvent(int event, String path) {
-            // because http://stackoverflow.com/a/20609634/969164
-            event &= FileObserver.ALL_EVENTS;
-            Log.i(TAG, "file event: " + nameOfFileEvent(event) + "; " + path);
-            File reportFile = new File(reportsDir, path);
-            if (event == FileObserver.DELETE || event == FileObserver.MOVED_FROM) {
-                // TODO: something; nothing happens when the app is suspended
-                fileRemovedFromDropbox(reportFile);
-            }
-            else if (event == FileObserver.CREATE || event == FileObserver.MOVED_TO) {
-                fileArrivedInDropbox(reportFile);
-            }
-        }
     }
 
     /**
