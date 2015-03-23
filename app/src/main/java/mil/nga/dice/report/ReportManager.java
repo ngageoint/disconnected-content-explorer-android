@@ -47,9 +47,13 @@ import mil.nga.dice.R;
  */
 public class ReportManager implements ReportImportCallbacks {
 
+
+    public static final String INTENT_LOAD_REPORT_LIST = "mil.nga.giat.dice.ReportManager.LOAD_REPORT_LIST";
+    public static final String INTENT_UPDATE_REPORT_LIST = "mil.nga.giat.dice.ReportManager.UPDATE_REPORT_LIST";
+
     private static final String TAG = ReportManager.class.getSimpleName();
 
-    private static final String DELETE_DIR_PREFIX = ".deleting.";
+    private static final String DELETE_FILE_PREFIX = ".deleting.";
 
     private static final long STABILITY_CHECK_INTERVAL = 250;
     private static final int MIN_STABILITY_CHECKS = 2;
@@ -101,6 +105,12 @@ public class ReportManager implements ReportImportCallbacks {
 
     private static ReportManager instance;
 
+    private static void ensureUiThread() {
+        if (Looper.getMainLooper() != Looper.myLooper()) {
+            throw new Error("not on ui thread!");
+        }
+    }
+
     private static String nameOfFileEvent(int event) {
         String name = fileEventNames.get(event);
         if (name == null) {
@@ -109,13 +119,10 @@ public class ReportManager implements ReportImportCallbacks {
         return name;
     }
 
-    public static final String INTENT_UPDATE_REPORT_LIST = "mil.nga.giat.dice.ReportManager.UPDATE_REPORT_LIST";
-
 	private final List<Report> reports = new ArrayList<>();
 	private final List<Report> reportsView = Collections.unmodifiableList(reports);
 
 	private Context context;
-    private File dropboxDir;
     private File reportsDir;
     private FileObserver dropboxObserver;
     private ScheduledExecutorService scheduledExecutor;
@@ -130,7 +137,6 @@ public class ReportManager implements ReportImportCallbacks {
         }
 
         this.context = context;
-
 
         final ThreadFactory defaultThreadFactory = Executors.defaultThreadFactory();
         ThreadFactory backgroundThreads = new ThreadFactory() {
@@ -152,9 +158,7 @@ public class ReportManager implements ReportImportCallbacks {
 
         handler = new Handler(Looper.getMainLooper());
 
-        dropboxDir = new File(Environment.getExternalStorageDirectory(), "DICE");
-        // TODO: separate reportsDir from dropboxDir to avoid too many FileObserver events and confusion
-        reportsDir = dropboxDir;
+        reportsDir = new File(Environment.getExternalStorageDirectory(), "DICE");
         if (!reportsDir.exists()) {
             reportsDir.mkdirs();
         }
@@ -164,8 +168,8 @@ public class ReportManager implements ReportImportCallbacks {
 
         findExistingReports();
 
-        dropboxObserver = new DropboxObserver();
-        dropboxObserver.startWatching();
+//        dropboxObserver = new DropboxObserver();
+//        dropboxObserver.startWatching();
 	}
 
     public void destroy() {
@@ -186,6 +190,11 @@ public class ReportManager implements ReportImportCallbacks {
      */
     public List<Report> getReports() {
         return reportsView;
+    }
+
+    public void refreshReports() {
+        reports.clear();
+        findExistingReports();
     }
 
     public Report getReportWithId(String id) {
@@ -216,19 +225,7 @@ public class ReportManager implements ReportImportCallbacks {
 
     // TODO: do something with this
     public void deleteReport(Report report) {
-        File reportPath = report.getPath();
-        if (reportPath.isFile()) {
-            if (!reportPath.delete()) {
-                Log.e(TAG, "failed to delete report file: " + reportPath);
-            }
-        }
-        else if (reportPath.isDirectory()) {
-            File deleteDir = new File(reportPath.getParent(), DELETE_DIR_PREFIX + reportPath.getName());
-            if (!reportPath.renameTo(deleteDir)) {
-                Log.e(TAG, "failed to rename report directory for deleting: " + reportPath);
-            }
-            deleteDirRecursive(deleteDir);
-        }
+        renameThenDeleteInBackground(report.getPath());
     }
 
     @Override
@@ -240,6 +237,7 @@ public class ReportManager implements ReportImportCallbacks {
     @Override
     public void importComplete(Report report) {
         ReportDescriptorUtil.readDescriptorAndUpdateReport(report);
+        deleteSourceFileIfInDropbox(report);
         report.setEnabled(true);
         broadcastUpdateReportList();
     }
@@ -251,21 +249,27 @@ public class ReportManager implements ReportImportCallbacks {
         broadcastUpdateReportList();
     }
 
+    /**
+     * Call on main thread only.
+     */
     private void findExistingReports() {
-        // TODO: do on background thread?
-        Log.i(TAG, "finding existing reports in dir " + reportsDir);
+        ensureUiThread();
+
+        Log.i(TAG, "finding existing reports in " + reportsDir);
+
         File[] existingReports = reportsDir.listFiles(new FileFilter() {
             @Override
             public boolean accept(File path) {
-                // TODO: check recognized file type
-                return path.isFile() || path.isDirectory();
+                return !path.getName().startsWith(DELETE_FILE_PREFIX) &&
+                        (uriCouldBeReport(Uri.fromFile(path)) || pathIsHtmlContentRoot(path));
             }
         });
+
         for (File reportPath : existingReports) {
             Log.d(TAG, "found existing potential report: " + reportPath);
-            Uri reportUri = Uri.fromFile(reportPath);
-            if (uriCouldBeReport(reportUri) || pathIsHtmlContentRoot(reportPath)) {
-                Report report = addNewReportForUri(Uri.fromFile(reportPath));
+            Report report = getReportWithPath(reportPath);
+            if (report == null) {
+                report = addNewReportForUri(Uri.fromFile(reportPath));
                 if (reportPath.isFile()) {
                     new CheckReportSourceFileStability(report, reportPath).schedule();
                 }
@@ -310,17 +314,25 @@ public class ReportManager implements ReportImportCallbacks {
         LocalBroadcastManager.getInstance(context).sendBroadcast(new Intent(INTENT_UPDATE_REPORT_LIST));
     }
 
-    private Report addNewReportForUri(Uri reportUri) {
-        String fileName = reportUri.toString();
+    /**
+     * Call on the main thread only.  Create a new {@link Report} object for the given source file URI and add it to the
+     * {@link #reports list}.  The new Report object will be updated during and/or after the import process.
+     *
+     * @param sourceFile the {@link android.net.Uri} that points to the source file of the report
+     * @return the new added {@link Report} object
+     */
+    private Report addNewReportForUri(Uri sourceFile) {
+        ensureUiThread();
+        String fileName = sourceFile.toString();
         long fileSize = -1;
-        if ("file".equals(reportUri.getScheme())) {
-            File reportFile = new File(reportUri.getPath());
+        if ("file".equals(sourceFile.getScheme())) {
+            File reportFile = new File(sourceFile.getPath());
             fileName = reportFile.getName();
             fileSize = reportFile.length();
         }
-        else if ("content".equals(reportUri.getScheme())) {
+        else if ("content".equals(sourceFile.getScheme())) {
             // TODO: test what happens when ADD_CONTENT selects a file from the report dropbox
-            Cursor reportInfo = context.getContentResolver().query(reportUri, null, null, null, null);
+            Cursor reportInfo = context.getContentResolver().query(sourceFile, null, null, null, null);
             int nameCol = reportInfo.getColumnIndex(OpenableColumns.DISPLAY_NAME);
             int sizeCol = reportInfo.getColumnIndex(OpenableColumns.SIZE);
             reportInfo.moveToFirst();
@@ -330,14 +342,15 @@ public class ReportManager implements ReportImportCallbacks {
         }
 
         Report report = new Report();
-        report.setSourceFile(reportUri);
+        report.setSourceFile(sourceFile);
         report.setSourceFileName(fileName);
         report.setSourceFileSize(fileSize);
         report.setTitle(fileName);
         report.setDescription(context.getString(R.string.import_pending));
         report.setEnabled(false);
 
-        handler.post(new AddReportOnUIThread(report));
+        reports.add(report);
+        broadcastUpdateReportList();
 
         return report;
     }
@@ -370,9 +383,20 @@ public class ReportManager implements ReportImportCallbacks {
         }
     }
 
+    private void deleteSourceFileIfInDropbox(Report report) {
+        if (!"file".equals(report.getSourceFile().getScheme())) {
+            // only reports imported from the dropbox dir should have file:// uris
+            return;
+        }
+        File sourceFile = new File(report.getSourceFile().getPath());
+        if (reportsDir.equals(sourceFile.getParentFile()) && !sourceFile.equals(report.getPath()) /* when dropbox and reports dir are the same */ ) {
+            renameThenDeleteInBackground(sourceFile);
+        }
+    }
+
     private Report getReportWithPath(File path) {
         for (Report r : reports) {
-            if (r.getPath().equals(path)) {
+            if (path.equals(r.getPath())) {
                 return r;
             }
         }
@@ -404,61 +428,36 @@ public class ReportManager implements ReportImportCallbacks {
         continueImport(report);
     }
 
-    private void removeReportFromList(Report report) {
-        handler.post(new RemoveReportOnUIThread(report));
-    }
+//    private void removeReportFromList(Report report) {
+//        handler.post(new RemoveReportOnUIThread(report));
+//    }
 
-    private boolean deleteDirRecursive(File dir) {
-        for (File child : dir.listFiles()) {
-            if (child.isFile()) {
-                if (!child.delete()) {
-                    Log.e(TAG, "failed to delete file: " + child);
-                    return false;
-                }
-            }
-            else if (child.isDirectory()) {
-                if (!deleteDirRecursive(child)) {
-                    Log.e(TAG, "failed to delete directory recursively: " + child);
-                    return false;
-                }
-            }
-            if (!child.delete()) {
-                Log.e(TAG, "failed to delete empty directory: " + child);
-                return false;
-            }
+    private boolean renameThenDeleteInBackground(final File path) {
+        File deletePath = new File(path.getParent(), DELETE_FILE_PREFIX + path.getName());
+        if (!path.renameTo(deletePath)) {
+            Log.e(TAG, "failed to rename path for deleting: " + path);
         }
+        new DeleteRecursive(deletePath).executeOnExecutor(importExecutor);
         return true;
     }
 
-	private class AddReportOnUIThread implements Runnable {
-		private final Report report;
-		private AddReportOnUIThread(Report report) {
-			this.report = report;
-		}
-		@Override
-		public void run() {
-			reports.add(report);
-			broadcastUpdateReportList();
-		}
-	}
-
-    private class RemoveReportOnUIThread implements Runnable {
-        private final Report report;
-        private RemoveReportOnUIThread(Report report) {
-            this.report = report;
-        }
-        @Override
-        public void run() {
-            if (reports.remove(report)) {
-                broadcastUpdateReportList();
-            }
-        }
-    }
+//    private class RemoveReportOnUIThread implements Runnable {
+//        private final Report report;
+//        private RemoveReportOnUIThread(Report report) {
+//            this.report = report;
+//        }
+//        @Override
+//        public void run() {
+//            if (reports.remove(report)) {
+//                broadcastUpdateReportList();
+//            }
+//        }
+//    }
 
     private class DropboxObserver extends FileObserver {
 
         public DropboxObserver() {
-            super(dropboxDir.getAbsolutePath(), 0 |
+            super(reportsDir.getAbsolutePath(), 0 |
                     FileObserver.CREATE | FileObserver.MOVED_TO |
                     FileObserver.DELETE | FileObserver.MOVED_FROM);
         }
@@ -468,7 +467,7 @@ public class ReportManager implements ReportImportCallbacks {
             // because http://stackoverflow.com/a/20609634/969164
             event &= FileObserver.ALL_EVENTS;
             Log.i(TAG, "file event: " + nameOfFileEvent(event) + "; " + path);
-            File reportFile = new File(dropboxDir, path);
+            File reportFile = new File(reportsDir, path);
             if (event == FileObserver.DELETE || event == FileObserver.MOVED_FROM) {
                 // TODO: something; nothing happens when the app is suspended
             }
@@ -479,7 +478,11 @@ public class ReportManager implements ReportImportCallbacks {
     }
 
     /**
-     * TODO: call {@link #importReportFromUri(android.net.Uri)} immediately when a report file is found and continue normal import after stable
+     * This is a {@link java.lang.Runnable} that will continue to check whether a file
+     * has changed every {@link #STABILITY_CHECK_INTERVAL} and reports when no changes
+     * have occurred after {@link #MIN_STABILITY_CHECKS}.  This is intended to avoid
+     * operating on files that are in the process of transferring from another device
+     * or file system.
      */
     private class CheckReportSourceFileStability implements Runnable {
         private final Report report;
@@ -501,7 +504,6 @@ public class ReportManager implements ReportImportCallbacks {
         }
         @Override
         public void run() {
-            // TODO: handle zero-length file gracefully
             if (fileIsStable()) {
                 if (++stableCount >= MIN_STABILITY_CHECKS) {
                     report.setSourceFileSize(sourceFile.length());
@@ -591,6 +593,37 @@ public class ReportManager implements ReportImportCallbacks {
                 importError(report);
             }
         }
+    }
+
+    private class DeleteRecursive extends AsyncTask<Void, Void, Boolean> {
+
+        private final File path;
+
+        private DeleteRecursive(File path) {
+            this.path = path;
+        }
+
+        @Override
+        protected Boolean doInBackground(Void... params) {
+            return deleteRecursive(path);
+        }
+
+        private boolean deleteRecursive(File file) {
+            if (file.isDirectory()) {
+                for (File child : file.listFiles()) {
+                    if (!deleteRecursive(child)) {
+                        Log.e(TAG, "failed to delete directory recursively: " + file);
+                        return false;
+                    }
+                }
+            }
+            if (!file.delete()) {
+                Log.e(TAG, "failed to delete file: " + file);
+                return false;
+            }
+            return true;
+        }
+
     }
 
 }

@@ -62,6 +62,8 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
             }
         }
         holder.mThumbnailImageView.setImageBitmap(bitmap);
+
+        holder.itemView.setEnabled(holder.mReport != null && holder.mReport.isEnabled());
     }
 
 
@@ -79,9 +81,11 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
             v.setOnClickListener(this);
         }
 
-
         @Override
         public void onClick(View v) {
+            if (!mReport.isEnabled()) {
+                return;
+            }
             Intent detailIntent = new Intent(activity, ReportDetailActivity.class);
             detailIntent.putExtra("report", mReport);
             activity.startActivity(detailIntent);

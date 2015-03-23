@@ -25,7 +25,7 @@ public class Report implements Parcelable {
 
 
 	public String toString() {
-		return this.title;
+        return "Report: " + title + " (id:" + id + ")";
 	}
 
 	/**

@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -37,7 +38,7 @@ import mil.nga.dice.report.ReportManager;
  *   <li>add reports using <a href="http://developer.android.com/guide/topics/providers/document-provider.html">Storage Access Framework</a></li>
  * </ol>
  */
-public class ReportCollectionActivity extends ActionBarActivity implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialogDismissedListener {
+public class ReportCollectionActivity extends ActionBarActivity implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialogDismissedListener, SwipeRefreshLayout.OnRefreshListener {
     
     public static final String TAG = "ReportCollection";
     
@@ -46,6 +47,7 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
 
     private int currentViewId = 0;
     private boolean handlingAddContent = false;
+    private SwipeRefreshLayout swipeToRefresh;
 
 
     @Override
@@ -53,6 +55,10 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_report_collection);
+        swipeToRefresh = (SwipeRefreshLayout) findViewById(R.id.report_collection);
+        swipeToRefresh.setRefreshing(true);
+        swipeToRefresh.setEnabled(false);
+        swipeToRefresh.setOnRefreshListener(this);
 
         if (savedInstanceState == null) {
             showCardView();
@@ -66,6 +72,7 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
             dialogFragment.show(getSupportFragmentManager(), "ReportCollectionActivity");
         }
 
+        // let onActivityResult() do it
         if (!handlingAddContent) {
             handleIntentData(getIntent());
         }
@@ -95,8 +102,13 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
             getContent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
             getContent = Intent.createChooser(getContent, getString(R.string.title_add_content));
             startActivityForResult(getContent, 0);
+            return true;
         }
-        if (id == R.id.action_about) {
+        else if (id == R.id.action_refresh) {
+            onRefresh();
+            return true;
+        }
+        else if (id == R.id.action_about) {
             showAboutView();
             return true;
         }
@@ -124,6 +136,12 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
             intent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
             startActivity(intent);
         }
+    }
+
+    @Override
+    public void onRefresh() {
+        swipeToRefresh.setEnabled(false);
+        ReportManager.getInstance().refreshReports();
     }
 
     @Override
