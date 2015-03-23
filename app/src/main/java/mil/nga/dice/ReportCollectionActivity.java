@@ -1,11 +1,15 @@
 package mil.nga.dice;
 
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
@@ -38,7 +42,8 @@ import mil.nga.dice.report.ReportManager;
  *   <li>add reports using <a href="http://developer.android.com/guide/topics/providers/document-provider.html">Storage Access Framework</a></li>
  * </ol>
  */
-public class ReportCollectionActivity extends ActionBarActivity implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialogDismissedListener, SwipeRefreshLayout.OnRefreshListener {
+public class ReportCollectionActivity extends ActionBarActivity
+implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialogDismissedListener, SwipeRefreshLayout.OnRefreshListener {
     
     public static final String TAG = "ReportCollection";
     
@@ -55,9 +60,7 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_report_collection);
-        swipeToRefresh = (SwipeRefreshLayout) findViewById(R.id.report_collection);
-        swipeToRefresh.setRefreshing(true);
-        swipeToRefresh.setEnabled(false);
+        swipeToRefresh = (SwipeRefreshLayout) findViewById(R.id.report_collection_swipe_refresh);
         swipeToRefresh.setOnRefreshListener(this);
 
         if (savedInstanceState == null) {
@@ -71,6 +74,14 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
             DisclaimerDialogFragment dialogFragment = DisclaimerDialogFragment.newInstance();
             dialogFragment.show(getSupportFragmentManager(), "ReportCollectionActivity");
         }
+
+        LocalBroadcastManager bm = LocalBroadcastManager.getInstance(this);
+        bm.registerReceiver(new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                swipeToRefresh.setRefreshing(false);
+            }
+        }, new IntentFilter(ReportManager.INTENT_END_REFRESH_REPORT_LIST));
 
         // let onActivityResult() do it
         if (!handlingAddContent) {
@@ -140,7 +151,6 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
 
     @Override
     public void onRefresh() {
-        swipeToRefresh.setEnabled(false);
         ReportManager.getInstance().refreshReports();
     }
 
@@ -196,7 +206,7 @@ public class ReportCollectionActivity extends ActionBarActivity implements Repor
 
     private boolean showCollectionViewForOptionItemId(int id) {
         if (id == currentViewId) {
-            return false;
+            return true;
         }
 
         currentViewId = id;

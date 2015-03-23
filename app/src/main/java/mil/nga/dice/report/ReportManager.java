@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -47,8 +48,7 @@ import mil.nga.dice.R;
  */
 public class ReportManager implements ReportImportCallbacks {
 
-
-    public static final String INTENT_LOAD_REPORT_LIST = "mil.nga.giat.dice.ReportManager.LOAD_REPORT_LIST";
+    public static final String INTENT_END_REFRESH_REPORT_LIST = "mil.nga.giat.dice.ReportManager.END_REFRESH_REPORT_LIST";
     public static final String INTENT_UPDATE_REPORT_LIST = "mil.nga.giat.dice.ReportManager.UPDATE_REPORT_LIST";
 
     private static final String TAG = ReportManager.class.getSimpleName();
@@ -166,7 +166,7 @@ public class ReportManager implements ReportImportCallbacks {
             throw new RuntimeException("content directory is not a directory or could not be created: " + reportsDir);
         }
 
-        findExistingReports();
+        refreshReports();
 
 //        dropboxObserver = new DropboxObserver();
 //        dropboxObserver.startWatching();
@@ -193,8 +193,10 @@ public class ReportManager implements ReportImportCallbacks {
     }
 
     public void refreshReports() {
-        reports.clear();
+        removeDeletedReports();
         findExistingReports();
+        broadcastUpdateReportList();
+        broadcastEndRefresh();
     }
 
     public Report getReportWithId(String id) {
@@ -220,6 +222,7 @@ public class ReportManager implements ReportImportCallbacks {
             return;
         }
         Report report = addNewReportForUri(reportUri);
+        broadcastUpdateReportList();
         continueImport(report);
 	}
 
@@ -247,6 +250,21 @@ public class ReportManager implements ReportImportCallbacks {
         report.setEnabled(false);
         report.setDescription(context.getString(R.string.import_error));
         broadcastUpdateReportList();
+    }
+
+    /**
+     * Call on main thread only
+     */
+    private void removeDeletedReports() {
+        ensureUiThread();
+
+        Iterator<Report> reportIterator = reports.iterator();
+        while (reportIterator.hasNext()) {
+            Report report = reportIterator.next();
+            if (report.isEnabled() && report.getPath() != null && !report.getPath().exists()) {
+                reportIterator.remove();
+            }
+        }
     }
 
     /**
@@ -314,6 +332,10 @@ public class ReportManager implements ReportImportCallbacks {
         LocalBroadcastManager.getInstance(context).sendBroadcast(new Intent(INTENT_UPDATE_REPORT_LIST));
     }
 
+    private void broadcastEndRefresh() {
+        LocalBroadcastManager.getInstance(context).sendBroadcast(new Intent(INTENT_END_REFRESH_REPORT_LIST));
+    }
+
     /**
      * Call on the main thread only.  Create a new {@link Report} object for the given source file URI and add it to the
      * {@link #reports list}.  The new Report object will be updated during and/or after the import process.
@@ -350,7 +372,6 @@ public class ReportManager implements ReportImportCallbacks {
         report.setEnabled(false);
 
         reports.add(report);
-        broadcastUpdateReportList();
 
         return report;
     }
@@ -415,6 +436,7 @@ public class ReportManager implements ReportImportCallbacks {
             if (uriCouldBeReport(uri)) {
                 // not imported yet
                 report = addNewReportForUri(Uri.fromFile(file));
+                broadcastUpdateReportList();
                 new CheckReportSourceFileStability(report, file).schedule();
             }
         }
