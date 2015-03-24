@@ -159,7 +159,7 @@ public class ReportManager implements ReportImportCallbacks {
     }
 
     public void refreshReports() {
-        removeDeletedReports();
+        removeDeletedAndErrorReports();
         findExistingReports();
         broadcastUpdateReportList();
         broadcastEndRefresh();
@@ -215,19 +215,23 @@ public class ReportManager implements ReportImportCallbacks {
     public void importError(Report report) {
         report.setEnabled(false);
         report.setDescription(context.getString(R.string.import_error));
+        if (report.getError() == null) {
+            report.setError(report.getDescription());
+        }
         broadcastUpdateReportList();
     }
 
     /**
      * Call on main thread only
      */
-    private void removeDeletedReports() {
+    private void removeDeletedAndErrorReports() {
         ensureUiThread();
 
         Iterator<Report> reportIterator = reports.iterator();
         while (reportIterator.hasNext()) {
             Report report = reportIterator.next();
-            if (report.isEnabled() && report.getPath() != null && !report.getPath().exists()) {
+            if ((report.isEnabled() && report.getPath() != null && !report.getPath().exists()) ||
+                    report.getError() != null) {
                 reportIterator.remove();
             }
         }
@@ -510,6 +514,7 @@ public class ReportManager implements ReportImportCallbacks {
             catch (FileNotFoundException e) {
                 // TODO: user feedback
                 Log.e(TAG, "error opening file descriptor for report uri: " + report.getSourceFile(), e);
+                report.setError(e.getMessage());
                 return false;
             }
             FileChannel source = new FileInputStream(fd).getChannel();
@@ -523,6 +528,7 @@ public class ReportManager implements ReportImportCallbacks {
             catch (FileNotFoundException e) {
                 // TODO: user feedback
                 Log.e(TAG, "error creating new report file for import: " + destFile, e);
+                report.setError(e.getMessage());
                 return false;
             }
 
@@ -533,6 +539,7 @@ public class ReportManager implements ReportImportCallbacks {
             }
             catch (IOException e) {
                 Log.e(TAG, "error copying report file from " + report.getSourceFile() + " to " + destFile, e);
+                report.setError(e.getMessage());
                 return false;
             }
             finally {
@@ -553,7 +560,7 @@ public class ReportManager implements ReportImportCallbacks {
 
         @Override
         protected void onPostExecute(Boolean success) {
-            if (success) {
+            if (report.getError() == null && success) {
                 report.setDescription("");
                 importComplete(report);
             }
