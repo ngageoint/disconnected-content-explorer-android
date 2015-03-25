@@ -14,12 +14,12 @@ import android.view.MenuItem;
 import java.io.File;
 
 import mil.nga.dice.about.DisclaimerDialogFragment;
-import mil.nga.dice.about.LegalDetailsFragment;
 import mil.nga.dice.cardview.CardViewFragment;
 import mil.nga.dice.map.ReportMapFragment;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
 import mil.nga.dice.report.ReportManager;
+import mil.nga.dice.about.AboutActivity;
 
 /**
  * <h3>TODO:</h3>
@@ -106,12 +106,16 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
             // TODO: test multiple
             getContent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
             getContent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
-            getContent = Intent.createChooser(getContent, getString(R.string.title_add_content));
+            getContent = Intent.createChooser(getContent, getString(R.string.action_add_content));
             startActivityForResult(getContent, 0);
             return true;
         }
         else if (id == R.id.action_refresh) {
             onRefresh();
+            return true;
+        }
+        else if (id == R.id.action_about) {
+            startAboutActivity();
             return true;
         }
 
@@ -211,10 +215,6 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
         else if (id == R.id.collection_view_card) {
             showCardView();
         }
-        else if (id == R.id.action_about) {
-            // not really a collection view but whatever
-            showAboutView();
-        }
 
         return currentViewId == id;
     }
@@ -231,10 +231,7 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
                 .commit();
     }
 
-    private void showAboutView() {
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.report_collection, new LegalDetailsFragment())
-                .addToBackStack("about")
-                .commit();
+    private void startAboutActivity() {
+        startActivity(new Intent(this, AboutActivity.class));
     }
 }

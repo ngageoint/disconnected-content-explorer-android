@@ -52,7 +52,7 @@
             <Button android:id="@+id/view_note_button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/open_note"
+                android:text="@string/action_open_note"
                 android:clickable="true"
                 android:background="@android:color/transparent"
                 android:textColor="@color/buttonColor"
