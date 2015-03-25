@@ -114,10 +114,6 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
             onRefresh();
             return true;
         }
-        else if (id == R.id.action_about) {
-            showAboutView();
-            return true;
-        }
 
         return showCollectionViewForOptionItemId(id);
     }
@@ -203,6 +199,10 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
             return true;
         }
 
+        if (currentViewId == R.id.action_about) {
+            getSupportFragmentManager().popBackStackImmediate();
+        }
+
         currentViewId = id;
 
         if (id == R.id.collection_view_map) {
@@ -210,6 +210,10 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
         }
         else if (id == R.id.collection_view_card) {
             showCardView();
+        }
+        else if (id == R.id.action_about) {
+            // not really a collection view but whatever
+            showAboutView();
         }
 
         return currentViewId == id;
@@ -228,10 +232,9 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
     }
 
     private void showAboutView() {
-        currentViewId = -1;
-
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.report_collection, new LegalDetailsFragment())
+                .addToBackStack("about")
                 .commit();
     }
 }
