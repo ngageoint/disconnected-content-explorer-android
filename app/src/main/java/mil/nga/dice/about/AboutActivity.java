@@ -20,6 +20,7 @@ public class AboutActivity extends ActionBarActivity {
         setContentView(R.layout.activity_about);
 
         aboutWebView = (WebView) findViewById(R.id.about_web_view);
+        aboutWebView.getSettings().setJavaScriptEnabled(true);
         aboutWebView.loadUrl("file:///android_asset/legal/legal.html");
     }
 
