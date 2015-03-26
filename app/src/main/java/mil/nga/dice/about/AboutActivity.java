@@ -1,6 +1,7 @@
 package mil.nga.dice.about;
 
 import android.os.Bundle;
+import android.os.PersistableBundle;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -21,12 +22,25 @@ public class AboutActivity extends ActionBarActivity {
 
         aboutWebView = (WebView) findViewById(R.id.about_web_view);
         aboutWebView.getSettings().setJavaScriptEnabled(true);
-        aboutWebView.loadUrl("file:///android_asset/legal/legal.html");
+
+        if (savedInstanceState == null) {
+            aboutWebView.loadUrl("file:///android_asset/legal/legal.html");
+        }
+        else {
+            aboutWebView.restoreState(savedInstanceState);
+        }
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         return false;
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        aboutWebView.saveState(outState);
     }
 
     @Override
