@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Environment;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -21,6 +22,7 @@ import mil.nga.dice.R;
 import mil.nga.dice.report.NoteActivity;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
+import mil.nga.dice.report.ReportManager;
 
 public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
 
@@ -106,9 +108,17 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
             if (!mReport.isEnabled()) {
                 return;
             }
-            Intent detailIntent = new Intent(activity, ReportDetailActivity.class);
-            detailIntent.putExtra("report", mReport);
-            activity.startActivity(detailIntent);
+
+            if (mReport.getId() != null && mReport.getId().equalsIgnoreCase(ReportManager.USER_GUIDE_REPORT_ID)) {
+                String url = "https://github.com/ngageoint/disconnected-content-explorer-examples/raw/master/reportzips/DICEUserGuide.zip";
+                Intent i = new Intent(Intent.ACTION_VIEW);
+                i.setData(Uri.parse(url));
+                activity.startActivity(i);
+            } else {
+                Intent detailIntent = new Intent(activity, ReportDetailActivity.class);
+                detailIntent.putExtra("report", mReport);
+                activity.startActivity(detailIntent);
+            }
         }
     }
 }

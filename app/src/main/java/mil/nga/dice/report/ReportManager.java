@@ -46,6 +46,7 @@ public class ReportManager implements ReportImportCallbacks {
 
     public static final String INTENT_END_REFRESH_REPORT_LIST = "mil.nga.giat.dice.ReportManager.END_REFRESH_REPORT_LIST";
     public static final String INTENT_UPDATE_REPORT_LIST = "mil.nga.giat.dice.ReportManager.UPDATE_REPORT_LIST";
+    public static final String USER_GUIDE_REPORT_ID = "mil.nga.giat.dice.downloadUserGuide";
 
     private static final String TAG = ReportManager.class.getSimpleName();
 
@@ -53,6 +54,8 @@ public class ReportManager implements ReportImportCallbacks {
 
     private static final long STABILITY_CHECK_INTERVAL = 250;
     private static final int MIN_STABILITY_CHECKS = 2;
+
+    private Report userGuideReport = new Report();
 
     private static final Set<String> supportedReportFileTypes;
     static {
@@ -187,6 +190,11 @@ public class ReportManager implements ReportImportCallbacks {
         if (!uriCouldBeReport(reportUri)) {
             return;
         }
+
+        if (reports.contains(userGuideReport)) {
+            reports.remove(userGuideReport);
+        }
+
         Report report = addNewReportForUri(reportUri);
         broadcastUpdateReportList();
         continueImport(report);
@@ -253,18 +261,28 @@ public class ReportManager implements ReportImportCallbacks {
             }
         });
 
-        for (File reportPath : existingReports) {
-            Log.d(TAG, "found existing potential report: " + reportPath);
-            Report report = getReportWithPath(reportPath);
-            if (report == null) {
-                report = addNewReportForUri(Uri.fromFile(reportPath));
-                if (reportPath.isFile()) {
-                    new CheckReportSourceFileStability(report, reportPath).schedule();
-                }
-                else if (reportPath.isDirectory()) {
-                    report.setPath(reportPath);
-                    ReportDescriptorUtil.readDescriptorAndUpdateReport(report);
-                    report.setEnabled(true);
+        // If there are no reports, point them towards to user guide
+        if (existingReports.length == 0 && getReportWithId(USER_GUIDE_REPORT_ID) == null) {
+            Log.d(TAG, "No reports, adding user guide placeholder");
+            userGuideReport.setTitle("Tap here to download the user guide");
+            userGuideReport.setDescription("After the download is complete, tap the notification and select \"Open in DICE\"");
+            userGuideReport.setEnabled(true);
+            userGuideReport.setId(USER_GUIDE_REPORT_ID);
+            reports.add(userGuideReport);
+        } else {
+            for (File reportPath : existingReports) {
+                Log.d(TAG, "found existing potential report: " + reportPath);
+                Report report = getReportWithPath(reportPath);
+                if (report == null) {
+                    report = addNewReportForUri(Uri.fromFile(reportPath));
+                    if (reportPath.isFile()) {
+                        new CheckReportSourceFileStability(report, reportPath).schedule();
+                    }
+                    else if (reportPath.isDirectory()) {
+                        report.setPath(reportPath);
+                        ReportDescriptorUtil.readDescriptorAndUpdateReport(report);
+                        report.setEnabled(true);
+                    }
                 }
             }
         }
