@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     
 	<item android:id="@+id/open_note"
-	    	android:title="@string/open_note"
+	    	android:title="@string/action_open_note"
 	    	app:showAsAction="ifRoom"/>
     
 </menu>

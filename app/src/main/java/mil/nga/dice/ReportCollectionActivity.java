@@ -14,12 +14,12 @@ import android.view.MenuItem;
 import java.io.File;
 
 import mil.nga.dice.about.DisclaimerDialogFragment;
-import mil.nga.dice.about.LegalDetailsFragment;
 import mil.nga.dice.cardview.CardViewFragment;
 import mil.nga.dice.map.ReportMapFragment;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
 import mil.nga.dice.report.ReportManager;
+import mil.nga.dice.about.AboutActivity;
 
 /**
  * <h3>TODO:</h3>
@@ -57,10 +57,6 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
 
         setContentView(R.layout.activity_report_collection);
 
-        if (savedInstanceState == null) {
-            showCardView();
-        }
-
         if (showDisclaimer == null) {
             SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
             showDisclaimer = preferences.getBoolean(HIDE_DISCLAIMER_KEY, true);
@@ -71,8 +67,10 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
             dialogFragment.show(getSupportFragmentManager(), "ReportCollectionActivity");
         }
 
-        // let onActivityResult() do it
-        if (!handlingAddContent) {
+        if (savedInstanceState == null) {
+            showCardView();
+        }
+        if (savedInstanceState == null && !handlingAddContent) {
             handleIntentData(getIntent());
         }
     }
@@ -106,7 +104,7 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
             // TODO: test multiple
             getContent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
             getContent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
-            getContent = Intent.createChooser(getContent, getString(R.string.title_add_content));
+            getContent = Intent.createChooser(getContent, getString(R.string.action_add_content));
             startActivityForResult(getContent, 0);
             return true;
         }
@@ -115,7 +113,7 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
             return true;
         }
         else if (id == R.id.action_about) {
-            showAboutView();
+            startAboutActivity();
             return true;
         }
 
@@ -203,6 +201,10 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
             return true;
         }
 
+        if (currentViewId == R.id.action_about) {
+            getSupportFragmentManager().popBackStackImmediate();
+        }
+
         currentViewId = id;
 
         if (id == R.id.collection_view_map) {
@@ -227,11 +229,7 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
                 .commit();
     }
 
-    private void showAboutView() {
-        currentViewId = -1;
-
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.report_collection, new LegalDetailsFragment())
-                .commit();
+    private void startAboutActivity() {
+        startActivity(new Intent(this, AboutActivity.class));
     }
 }

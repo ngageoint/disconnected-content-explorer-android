@@ -5,11 +5,11 @@
 
     <item android:id="@+id/collection_view_card"
         android:icon="@drawable/ic_view_card"
-        android:title="@string/show_cards"
+        android:title="@string/action_show_cards"
         app:showAsAction="ifRoom"/>
     <item android:id="@+id/collection_view_map"
         android:icon="@drawable/ic_map"
-        android:title="@string/show_map"
+        android:title="@string/action_show_map"
         app:showAsAction="ifRoom"/>
     <item android:id="@+id/action_refresh"
         android:icon="@drawable/ic_action_refresh"
@@ -17,7 +17,7 @@
         app:showAsAction="never"/>
     <item android:id="@+id/action_add_content"
         android:icon="@android:drawable/btn_plus"
-        android:title="@string/title_add_content"
+        android:title="@string/action_add_content"
         app:showAsAction="never"/>
     <item android:id="@+id/action_about"
         android:title="@string/action_about"

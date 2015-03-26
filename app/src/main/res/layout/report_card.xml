@@ -22,7 +22,7 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginLeft="126dp"
+        android:layout_marginLeft="128dp"
         android:layout_marginTop="16dp"
         android:layout_marginRight="8dp"
         android:layout_toRightOf="@+id/card_thumbnail">
@@ -44,7 +44,7 @@
         <Button android:id="@+id/view_note_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/open_note"
+            android:text="@string/action_open_note"
             android:clickable="true"
             android:background="@android:color/transparent"
             android:textColor="@color/buttonColor"
