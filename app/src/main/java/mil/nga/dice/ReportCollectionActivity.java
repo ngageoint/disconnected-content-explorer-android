@@ -145,13 +145,10 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
                 }
             }
             Intent viewContent = new Intent(Intent.ACTION_VIEW);
-            viewContent.setData(reportUri);
-            viewContent.setType(contentType);
+            viewContent.setDataAndType(reportUri, contentType);
             viewContent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
-            String title = getString(R.string.choose_unsupported_content_viewer, reportPath.getName());
-            Intent chooser = Intent.createChooser(viewContent, title);
             if (viewContent.resolveActivity(getPackageManager()) != null) {
-                startActivity(chooser);
+                startActivity(viewContent);
             }
             else {
                 Toast.makeText(this, R.string.no_viewer_for_report, Toast.LENGTH_SHORT).show();
