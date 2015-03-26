@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -107,7 +108,15 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
             if (!mReport.isEnabled()) {
                 return;
             }
-            callbacks.reportSelectedToView(mReport);
+
+            if (mReport.getId() != null && mReport.getId().equalsIgnoreCase(ReportManager.USER_GUIDE_REPORT_ID)) {
+                String url = "https://github.com/ngageoint/disconnected-content-explorer-examples/raw/master/reportzips/DICEUserGuide.zip";
+                Intent i = new Intent(Intent.ACTION_VIEW);
+                i.setData(Uri.parse(url));
+                context.startActivity(i);
+            } else {
+                callbacks.reportSelectedToView(mReport);
+            }
         }
     }
 }

@@ -116,4 +116,5 @@ public class NoteActivity extends ActionBarActivity {
 
 		return "";
 	}
+
 }

@@ -13,6 +13,7 @@ import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -65,15 +66,17 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
         mRecyclerView = (RecyclerView) v.findViewById(R.id.report_recycler);
         mRecyclerView.setHasFixedSize(true);
 
+        DisplayMetrics metrics = getResources().getDisplayMetrics();
+        float widthDp = metrics.widthPixels / metrics.density;
         swipeRefresh = (SwipeRefreshLayout) v.findViewById(R.id.report_collection_swipe_refresh);
         swipeRefresh.setOnRefreshListener(this);
 
-        int screenWidth = getResources().getDisplayMetrics().widthPixels;
-        if (screenWidth < 700) {
+        // Smaller screens get a list of cards, larger screens get a grid of cards.
+        if (widthDp < 700) {
             mLayoutManager = new LinearLayoutManager(getActivity());
         } else {
             int columns = 2;
-            if (screenWidth > 900)  {
+            if (widthDp > 900)  {
                 columns = 3;
             }
             mLayoutManager = new GridLayoutManager(getActivity(), columns);
