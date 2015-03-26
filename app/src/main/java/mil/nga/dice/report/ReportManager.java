@@ -101,6 +101,7 @@ public class ReportManager implements ReportImportCallbacks {
     private final File notesDir;
     private final String externalContentThumbnail;
     private final Drawable externalContentIcon;
+    private final Drawable thumbnailMissingIcon;
     private ScheduledExecutorService scheduledExecutor;
     private ExecutorService importExecutor;
 	private Handler handler;
@@ -114,9 +115,11 @@ public class ReportManager implements ReportImportCallbacks {
 
         this.context = context.getApplicationContext();
 
-        this.externalContentThumbnail = ContentResolver.SCHEME_ANDROID_RESOURCE + "://" +
+        externalContentThumbnail = ContentResolver.SCHEME_ANDROID_RESOURCE + "://" +
                 context.getApplicationInfo().packageName + "/" + String.valueOf(R.drawable.ic_launch);
-        this.externalContentIcon = loadExternalLaunchIcon();
+        externalContentIcon = loadExternalLaunchIcon();
+
+        thumbnailMissingIcon = loadThumbnailMissingIcon();
 
         final ThreadFactory defaultThreadFactory = Executors.defaultThreadFactory();
         ThreadFactory backgroundThreads = new ThreadFactory() {
@@ -199,7 +202,7 @@ public class ReportManager implements ReportImportCallbacks {
 
     public Drawable thumbnailForReport(Report report) {
         if (report.getThumbnail() == null) {
-            return null;
+            return thumbnailMissingIcon;
         }
         if (externalContentThumbnail.equals(report.getThumbnail())) {
             return externalContentIcon;
@@ -208,7 +211,7 @@ public class ReportManager implements ReportImportCallbacks {
         if (imageFile.exists()) {
             return Drawable.createFromPath(imageFile.getAbsolutePath());
         }
-        return null;
+        return thumbnailMissingIcon;
     }
 
     /**
@@ -277,6 +280,10 @@ public class ReportManager implements ReportImportCallbacks {
         Drawable drawable = context.getResources().getDrawable(R.drawable.ic_launch);
         drawable.setColorFilter(filter);
         return drawable;
+    }
+
+    private Drawable loadThumbnailMissingIcon() {
+        return context.getResources().getDrawable(R.drawable.thumbnail_missing);
     }
 
     /**
