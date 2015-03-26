@@ -57,10 +57,6 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
 
         setContentView(R.layout.activity_report_collection);
 
-        if (savedInstanceState == null) {
-            showCardView();
-        }
-
         if (showDisclaimer == null) {
             SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
             showDisclaimer = preferences.getBoolean(HIDE_DISCLAIMER_KEY, true);
@@ -71,8 +67,10 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
             dialogFragment.show(getSupportFragmentManager(), "ReportCollectionActivity");
         }
 
-        // let onActivityResult() do it
-        if (!handlingAddContent) {
+        if (savedInstanceState == null) {
+            showCardView();
+        }
+        if (savedInstanceState == null && !handlingAddContent) {
             handleIntentData(getIntent());
         }
     }
