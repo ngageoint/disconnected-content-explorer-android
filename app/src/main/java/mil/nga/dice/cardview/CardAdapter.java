@@ -67,14 +67,7 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
             }
         }
         holder.mThumbnailImageView.setImageBitmap(bitmap);
-
-        if (!ReportManager.getInstance().reportHasNote(report)) {
-            holder.mNoteButton.setVisibility(View.INVISIBLE);
-        }
-        else {
-            holder.mNoteButton.setVisibility(View.VISIBLE);
-        }
-
+        
         holder.itemView.setEnabled(holder.mReport != null && holder.mReport.isEnabled());
     }
 
