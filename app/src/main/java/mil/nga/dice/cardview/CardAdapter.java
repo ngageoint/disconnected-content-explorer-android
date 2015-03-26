@@ -64,6 +64,12 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
         holder.mThumbnailImageView.setImageDrawable(thumbnail);
 
         holder.itemView.setEnabled(holder.mReport != null && holder.mReport.isEnabled());
+        if (holder.itemView.isEnabled()) {
+            holder.mNoteButton.setVisibility(View.VISIBLE);
+        }
+        else {
+            holder.mNoteButton.setVisibility(View.INVISIBLE);
+        }
     }
 
 
