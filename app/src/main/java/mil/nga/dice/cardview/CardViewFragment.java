@@ -18,6 +18,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import mil.nga.dice.R;
+import mil.nga.dice.ReportCollectionCallbacks;
 import mil.nga.dice.report.ReportManager;
 
 
@@ -31,7 +32,7 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
     public void onCreate(Bundle savedInstance) {
         super.onCreate(savedInstance);
 
-        mAdapter = new CardAdapter(getActivity(), ReportManager.getInstance().getReports());
+        mAdapter = new CardAdapter(getActivity(), ReportManager.getInstance().getReports(), (ReportCollectionCallbacks) getActivity());
 
         LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getActivity());
         final Handler uiThread = new Handler(Looper.getMainLooper());

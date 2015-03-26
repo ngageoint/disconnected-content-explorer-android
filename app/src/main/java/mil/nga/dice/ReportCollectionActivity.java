@@ -10,6 +10,7 @@ import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import java.io.File;
 
@@ -127,18 +128,24 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
         }
         // TODO: figure out more robust file type handling - what does Android offer?
         // Start the detail activity for the selected report
-        if (report.getFileExtension().equalsIgnoreCase("zip")) {
+        if (report.getPath().isDirectory()) {
             Intent detailIntent = new Intent(this, ReportDetailActivity.class);
             detailIntent.putExtra("report", report);
             startActivity(detailIntent);
         }
-        else if (report.getFileExtension().equalsIgnoreCase("pdf")) {
-            // TODO: implement ContentProvider
+        else {
             File file = report.getPath();
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(Uri.fromFile(file), "application/pdf");
-            intent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
-            startActivity(intent);
+            Intent viewContent = new Intent(Intent.ACTION_VIEW);
+            viewContent.setData(Uri.fromFile(file));
+            viewContent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+            String title = getString(R.string.choose_unsupported_content_viewer, file.getName());
+            Intent chooser = Intent.createChooser(viewContent, title);
+            if (viewContent.resolveActivity(getPackageManager()) != null) {
+                startActivity(chooser);
+            }
+            else {
+                Toast.makeText(this, R.string.no_viewer_for_report, Toast.LENGTH_SHORT).show();
+            }
         }
     }
 

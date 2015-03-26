@@ -1,11 +1,9 @@
 package mil.nga.dice.cardview;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.os.Environment;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,23 +16,23 @@ import java.io.File;
 import java.util.List;
 
 import mil.nga.dice.R;
+import mil.nga.dice.ReportCollectionCallbacks;
 import mil.nga.dice.report.NoteActivity;
 import mil.nga.dice.report.Report;
-import mil.nga.dice.report.ReportDetailActivity;
+import mil.nga.dice.report.ReportManager;
 
 public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
 
-    private List<Report> reports;
-    private static LayoutInflater inflater = null;
-    private static Activity activity;
-    File root = Environment.getExternalStorageDirectory();
-    File notesDirectory = new File(root.getPath() + "/DICE/notes");
+    private final Context context;
+    private final List<Report> reports;
+    private final ReportCollectionCallbacks callbacks;
+    private final LayoutInflater inflater;
 
-
-    public CardAdapter(Activity activity, List<Report> reports) {
+    public CardAdapter(Context context, List<Report> reports, ReportCollectionCallbacks callbacks) {
         this.reports = reports;
-        this.activity = activity;
-        inflater = (LayoutInflater) this.activity.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        this.context = context;
+        this.callbacks = callbacks;
+        inflater = (LayoutInflater) this.context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     }
 
 
@@ -69,33 +67,36 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
         }
         holder.mThumbnailImageView.setImageBitmap(bitmap);
 
-        File note = new File(notesDirectory.getPath(), report.getTitle() + ".txt");
-        if (!note.exists()) {
-            holder.mButton.setVisibility(View.INVISIBLE);
+        if (!ReportManager.getInstance().reportHasNote(report)) {
+            holder.mNoteButton.setVisibility(View.INVISIBLE);
+        }
+        else {
+            holder.mNoteButton.setVisibility(View.VISIBLE);
         }
 
         holder.itemView.setEnabled(holder.mReport != null && holder.mReport.isEnabled());
     }
 
 
-    public static class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
-        public Report mReport;
-        public ImageView mThumbnailImageView;
-        public TextView mTitleTextView;
-        public TextView mDescriptionTextView;
-        public Button mButton;
+    public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
+        private Report mReport;
+        private ImageView mThumbnailImageView;
+        private TextView mTitleTextView;
+        private TextView mDescriptionTextView;
+        private Button mNoteButton;
 
         public ViewHolder(View v) {
             super(v);
+
             mThumbnailImageView = (ImageView) v.findViewById(R.id.card_thumbnail);
             mTitleTextView = (TextView) v.findViewById(R.id.card_title);
             mDescriptionTextView = (TextView) v.findViewById(R.id.card_description);
-            mButton = (Button) v.findViewById(R.id.view_note_button);
-            mButton.setOnClickListener(new View.OnClickListener() {
+            mNoteButton = (Button) v.findViewById(R.id.view_note_button);
+            mNoteButton.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View view) {
-                    Intent noteIntent = new Intent(activity, NoteActivity.class);
+                    Intent noteIntent = new Intent(context, NoteActivity.class);
                     noteIntent.putExtra("report", mReport);
-                    activity.startActivity(noteIntent);
+                    context.startActivity(noteIntent);
                 }
             });
             v.setOnClickListener(this);
@@ -106,9 +107,7 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
             if (!mReport.isEnabled()) {
                 return;
             }
-            Intent detailIntent = new Intent(activity, ReportDetailActivity.class);
-            detailIntent.putExtra("report", mReport);
-            activity.startActivity(detailIntent);
+            callbacks.reportSelectedToView(mReport);
         }
     }
 }

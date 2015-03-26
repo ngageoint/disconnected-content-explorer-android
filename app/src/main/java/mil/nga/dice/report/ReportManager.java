@@ -6,10 +6,8 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Environment;
-import android.os.FileObserver;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.ParcelFileDescriptor;
 import android.os.Process;
 import android.provider.OpenableColumns;
 import android.support.v4.content.LocalBroadcastManager;
@@ -92,9 +90,9 @@ public class ReportManager implements ReportImportCallbacks {
 	private final List<Report> reports = new ArrayList<>();
 	private final List<Report> reportsView = Collections.unmodifiableList(reports);
 
-	private Context context;
-    private File reportsDir;
-    private FileObserver dropboxObserver;
+	private final Context context;
+    private final File reportsDir;
+    private final File notesDir;
     private ScheduledExecutorService scheduledExecutor;
     private ExecutorService importExecutor;
 	private Handler handler;
@@ -106,7 +104,7 @@ public class ReportManager implements ReportImportCallbacks {
             throw new Error("too many ReportManager instances");
         }
 
-        this.context = context;
+        this.context = context.getApplicationContext();
 
         final ThreadFactory defaultThreadFactory = Executors.defaultThreadFactory();
         ThreadFactory backgroundThreads = new ThreadFactory() {
@@ -136,17 +134,21 @@ public class ReportManager implements ReportImportCallbacks {
             throw new RuntimeException("content directory is not a directory or could not be created: " + reportsDir);
         }
 
+        notesDir = new File(reportsDir, "notes");
+        if (!notesDir.exists() && !notesDir.mkdirs()) {
+            throw new RuntimeException("notes directory does not exist and could not be created: " + notesDir);
+        }
+
         refreshReports();
 	}
 
     public void destroy() {
-        Log.i(TAG, "destroying ReportManager");
+        Log.i(TAG, "destruction");
 
         scheduledExecutor.shutdown();
-        importExecutor.shutdown();
-        dropboxObserver.stopWatching();
-        dropboxObserver = null;
         scheduledExecutor = null;
+        importExecutor.shutdown();
+        importExecutor = null;
         handler = null;
         instance = null;
     }
@@ -173,6 +175,19 @@ public class ReportManager implements ReportImportCallbacks {
             }
         }
         return null;
+    }
+
+    public File getNotesDir() {
+        return notesDir;
+    }
+
+    public File noteFileForReport(Report report) {
+        return new File(notesDir, report.getTitle() + ".txt");
+    }
+
+    public boolean reportHasNote(Report report) {
+        File note = noteFileForReport(report);
+        return note.exists() && note.length() > 0;
     }
 
     /**
@@ -320,10 +335,22 @@ public class ReportManager implements ReportImportCallbacks {
      */
     private Report addNewReportForUri(Uri sourceFile) {
         ensureUiThread();
+
+        Report report = getReportWithSourceFile(sourceFile);
+        if (report != null) {
+            // already got it - move on
+            return report;
+        }
+
         String fileName = sourceFile.toString();
         long fileSize = -1;
         if ("file".equals(sourceFile.getScheme())) {
             File reportFile = new File(sourceFile.getPath());
+            report = getReportWithPath(reportFile);
+            if (report != null) {
+                // source file is probably a file in the reports dir
+                return report;
+            }
             fileName = reportFile.getName();
             fileSize = reportFile.length();
         }
@@ -338,7 +365,7 @@ public class ReportManager implements ReportImportCallbacks {
             reportInfo.close();
         }
 
-        Report report = new Report();
+        report = new Report();
         report.setSourceFile(sourceFile);
         report.setSourceFileName(fileName);
         report.setSourceFileSize(fileSize);
@@ -391,6 +418,15 @@ public class ReportManager implements ReportImportCallbacks {
     private Report getReportWithPath(File path) {
         for (Report r : reports) {
             if (path.equals(r.getPath())) {
+                return r;
+            }
+        }
+        return null;
+    }
+
+    private Report getReportWithSourceFile(Uri sourceFile) {
+        for (Report r : reports) {
+            if (sourceFile.equals(r.getSourceFile())) {
                 return r;
             }
         }

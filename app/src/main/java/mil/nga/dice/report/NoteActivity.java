@@ -9,10 +9,7 @@ import java.io.InputStreamReader;
 
 import mil.nga.dice.R;
 
-import android.content.Intent;
 import android.os.Bundle;
-import android.os.Environment;
-import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -22,12 +19,9 @@ import android.widget.Toast;
 
 public class NoteActivity extends ActionBarActivity {
 	
-	Report mReport;
-	
-	File root = Environment.getExternalStorageDirectory();
-	File notesDirectory = new File(root.getPath() + "/DICE/notes");
-    public static final String INTENT_REFRESH_CARDS = ReportManager.class.getName() + ".UPDATE_REPORT_LIST";
-	
+	private Report mReport;
+	private File notesDirectory = ReportManager.getInstance().getNotesDir();
+
 	@Override
 	public void onCreate(Bundle savedInstance) {
 		super.onCreate(savedInstance);
@@ -36,8 +30,7 @@ public class NoteActivity extends ActionBarActivity {
 		Bundle bundle = getIntent().getExtras();
 		mReport = bundle.getParcelable("report");
 		
-		String notePath = notesDirectory.getPath() + "/" + mReport.getTitle() + ".txt";
-		String noteText = readNote(notePath);
+		String noteText = readNote();
 		TextView textView = (TextView)findViewById(R.id.noteTextArea);
 		textView.setText(noteText);
         setTitle(mReport.getTitle() + " note");
@@ -67,11 +60,7 @@ public class NoteActivity extends ActionBarActivity {
 		// TODO Auto-generated method stub
 		TextView textView = (TextView)findViewById(R.id.noteTextArea);
 		
-		File note= new File(notesDirectory.getPath() + "/" + mReport.getTitle() + ".txt");
-		
-		if (!notesDirectory.exists()) {
-			notesDirectory.mkdir();
-		}
+		File note = ReportManager.getInstance().noteFileForReport(mReport);
 		
 		try {
 			note.createNewFile();
@@ -79,12 +68,13 @@ public class NoteActivity extends ActionBarActivity {
 			fOut.write(textView.getText().toString().getBytes());
 			fOut.flush();
 			fOut.close();
-			Toast.makeText(getBaseContext(), "Note saved", Toast.LENGTH_SHORT).show();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			Toast.makeText(getBaseContext(), "Problem saving note", Toast.LENGTH_SHORT).show();
+			Toast.makeText(getBaseContext(), R.string.note_saved, Toast.LENGTH_SHORT).show();
+		}
+        catch (IOException e) {
+			Toast.makeText(getBaseContext(), R.string.note_save_error, Toast.LENGTH_SHORT).show();
 			e.printStackTrace();
 		}
+
 		finish();
 	}
 
@@ -102,40 +92,28 @@ public class NoteActivity extends ActionBarActivity {
 	}
 	
 	
-	private String readNote(String path) {
-		String noteText = "";
-		
-		File note = new File(path);
-		if (note.exists()) {
-			try {
-				FileInputStream inputStream = new FileInputStream(note);
-				
-				if (inputStream != null) {
-					InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-					BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-					String readString = "";
-					StringBuilder stringBuilder = new StringBuilder();
-					
-					while ((readString = bufferedReader.readLine()) != null) {
-						stringBuilder.append(readString).append("\n");
-					}
-					
-					inputStream.close();
-					noteText = stringBuilder.toString();
-				}
-				
-			} catch (Exception e) {
-				Toast.makeText(getBaseContext(), "Problem loading note", Toast.LENGTH_SHORT).show();	
-			}
-		}
-		
-		return noteText;
+	private String readNote() {
+		File note = ReportManager.getInstance().noteFileForReport(mReport);
+		if (!note.exists()) {
+            return "";
+        }
+
+        try {
+            BufferedReader noteReader = new BufferedReader(new InputStreamReader(new FileInputStream(note)));
+            String line = "";
+            StringBuilder stringBuilder = new StringBuilder();
+
+            while ((line = noteReader.readLine()) != null) {
+                stringBuilder.append(line).append("\n");
+            }
+
+            noteReader.close();
+            return stringBuilder.toString();
+        }
+        catch (Exception e) {
+            Toast.makeText(getBaseContext(), R.string.note_load_error, Toast.LENGTH_SHORT).show();
+        }
+
+		return "";
 	}
-
-
-    @Override
-    public void onBackPressed() {
-        super.onBackPressed();
-        //LocalBroadcastManager.getInstance(getApplication()).sendBroadcastSync(new Intent(INTENT_UPDATE_REPORT_LIST));
-    }
 }

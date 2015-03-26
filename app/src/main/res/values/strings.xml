@@ -26,5 +26,10 @@
     <string name="disclaimer_exit_button_text">Exit</string>
     <string name="disclaimer_agree_button_text">I Agree</string>
     <string name="import_error_unsupported">Unsupported content type</string>
+    <string name="no_viewer_for_report">No app to view content</string>
+    <string name="note_saved">Note saved</string>
+    <string name="note_save_error">Problem saving note</string>
+    <string name="note_load_error">Problem loading note</string>
+    <string name="choose_unsupported_content_viewer">View %s with ...</string>
 
 </resources>
