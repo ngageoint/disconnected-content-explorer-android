@@ -10,6 +10,7 @@ import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.webkit.MimeTypeMap;
 import android.widget.Toast;
 
 import java.io.File;
@@ -134,11 +135,20 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
             startActivity(detailIntent);
         }
         else {
-            File file = report.getPath();
+            File reportPath = report.getPath();
+            Uri reportUri = Uri.fromFile(reportPath);
+            String contentType = getContentResolver().getType(reportUri);
+            if (contentType == null) {
+                String ext = MimeTypeMap.getFileExtensionFromUrl(reportUri.toString());
+                if (ext != null) {
+                    contentType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext);
+                }
+            }
             Intent viewContent = new Intent(Intent.ACTION_VIEW);
-            viewContent.setData(Uri.fromFile(file));
+            viewContent.setData(reportUri);
+            viewContent.setType(contentType);
             viewContent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
-            String title = getString(R.string.choose_unsupported_content_viewer, file.getName());
+            String title = getString(R.string.choose_unsupported_content_viewer, reportPath.getName());
             Intent chooser = Intent.createChooser(viewContent, title);
             if (viewContent.resolveActivity(getPackageManager()) != null) {
                 startActivity(chooser);
