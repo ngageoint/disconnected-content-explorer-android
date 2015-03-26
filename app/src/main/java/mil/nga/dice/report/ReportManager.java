@@ -1,8 +1,19 @@
 package mil.nga.dice.report;
 
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.BitmapShader;
+import android.graphics.Color;
+import android.graphics.ColorFilter;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
+import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Environment;
@@ -20,6 +31,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -96,6 +108,8 @@ public class ReportManager implements ReportImportCallbacks {
 	private final Context context;
     private final File reportsDir;
     private final File notesDir;
+    private final String externalContentThumbnail;
+    private final Drawable externalContentIcon;
     private ScheduledExecutorService scheduledExecutor;
     private ExecutorService importExecutor;
 	private Handler handler;
@@ -108,6 +122,10 @@ public class ReportManager implements ReportImportCallbacks {
         }
 
         this.context = context.getApplicationContext();
+
+        this.externalContentThumbnail = ContentResolver.SCHEME_ANDROID_RESOURCE + "://" +
+                context.getApplicationInfo().packageName + "/" + String.valueOf(R.drawable.ic_launch);
+        this.externalContentIcon = loadExternalLaunchIcon();
 
         final ThreadFactory defaultThreadFactory = Executors.defaultThreadFactory();
         ThreadFactory backgroundThreads = new ThreadFactory() {
@@ -188,9 +206,18 @@ public class ReportManager implements ReportImportCallbacks {
         return new File(notesDir, report.getTitle() + ".txt");
     }
 
-    public boolean reportHasNote(Report report) {
-        File note = noteFileForReport(report);
-        return note.exists() && note.length() > 0;
+    public Drawable thumbnailForReport(Report report) {
+        if (report.getThumbnail() == null) {
+            return null;
+        }
+        if (externalContentThumbnail.equals(report.getThumbnail())) {
+            return externalContentIcon;
+        }
+        File imageFile = new File(report.getPath(), report.getThumbnail());
+        if (imageFile.exists()) {
+            return Drawable.createFromPath(imageFile.getAbsolutePath());
+        }
+        return null;
     }
 
     /**
@@ -243,6 +270,22 @@ public class ReportManager implements ReportImportCallbacks {
             report.setError(report.getDescription());
         }
         broadcastUpdateReportList();
+    }
+
+    private Drawable loadExternalLaunchIcon() {
+        int color = context.getResources().getColor(R.color.colorPrimaryDark);
+        int red = (color & 0x00ff0000) >> 16;
+        int green = (color & 0x0000ff00) >> 8;
+        int blue = color & 0x000000ff;
+        ColorMatrixColorFilter filter = new ColorMatrixColorFilter(new float[]{
+                0, 0, 0, 0, red,
+                0, 0, 0, 0, green,
+                0, 0, 0, 0, blue,
+                0, 0, 0, 1, 0,
+        });
+        Drawable drawable = context.getResources().getDrawable(R.drawable.ic_launch);
+        drawable.setColorFilter(filter);
+        return drawable;
     }
 
     /**
@@ -418,6 +461,7 @@ public class ReportManager implements ReportImportCallbacks {
             // file stability check should be handling this
             // TODO: unnecessary if dropbox dir and reports dir are separate
             report.setPath(destPath);
+            report.setThumbnail(externalContentThumbnail);
             new CopyReportSourceFileToReportPath(report).executeOnExecutor(importExecutor);
         }
     }

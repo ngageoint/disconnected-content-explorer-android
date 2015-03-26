@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -59,15 +60,9 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
         holder.mTitleTextView.setText(report.getTitle());
         holder.mDescriptionTextView.setText(report.getDescription());
 
-        Bitmap bitmap = null;
-        if (report.getThumbnail() != null) {
-            File image = new File(report.getPath(), report.getThumbnail());
-            if (image.exists()) {
-                bitmap = BitmapFactory.decodeFile(image.getAbsolutePath());
-            }
-        }
-        holder.mThumbnailImageView.setImageBitmap(bitmap);
-        
+        Drawable thumbnail = ReportManager.getInstance().thumbnailForReport(report);
+        holder.mThumbnailImageView.setImageDrawable(thumbnail);
+
         holder.itemView.setEnabled(holder.mReport != null && holder.mReport.isEnabled());
     }
 
