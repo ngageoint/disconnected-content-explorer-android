@@ -30,7 +30,9 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
     @Override
     public void onCreate(Bundle savedInstance) {
         super.onCreate(savedInstance);
+
         mAdapter = new CardAdapter(getActivity(), ReportManager.getInstance().getReports());
+
         LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getActivity());
         final Handler uiThread = new Handler(Looper.getMainLooper());
         bm.registerReceiver(new BroadcastReceiver() {

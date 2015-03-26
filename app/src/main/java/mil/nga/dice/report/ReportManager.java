@@ -9,6 +9,7 @@ import android.os.Environment;
 import android.os.FileObserver;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.ParcelFileDescriptor;
 import android.os.Process;
 import android.provider.OpenableColumns;
 import android.support.v4.content.LocalBroadcastManager;
@@ -266,6 +267,10 @@ public class ReportManager implements ReportImportCallbacks {
                     ReportDescriptorUtil.readDescriptorAndUpdateReport(report);
                     report.setEnabled(true);
                 }
+                else {
+                    report.setError(context.getString(R.string.import_error_unsupported));
+                    report.setDescription(report.getError());
+                }
             }
         }
     }
@@ -365,12 +370,10 @@ public class ReportManager implements ReportImportCallbacks {
         }
         else {
             File destPath = new File(reportsDir, fileName);
-            if (!destPath.exists()) {
-                // file stability check should be handling this
-                // TODO: unnecessary if dropbox dir and reports dir are separate
-                report.setPath(destPath);
-                new CopyReportSourceFileToReportPath(report).executeOnExecutor(importExecutor);
-            }
+            // file stability check should be handling this
+            // TODO: unnecessary if dropbox dir and reports dir are separate
+            report.setPath(destPath);
+            new CopyReportSourceFileToReportPath(report).executeOnExecutor(importExecutor);
         }
     }
 
@@ -507,6 +510,9 @@ public class ReportManager implements ReportImportCallbacks {
 
         @Override
         protected Boolean doInBackground(Void... params) {
+            if (report.getPath().exists()) {
+                return true;
+            }
             FileDescriptor fd;
             try {
                 fd = context.getContentResolver().openFileDescriptor(report.getSourceFile(), "r").getFileDescriptor();

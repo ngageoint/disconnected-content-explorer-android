@@ -25,5 +25,6 @@
     ]]></string>
     <string name="disclaimer_exit_button_text">Exit</string>
     <string name="disclaimer_agree_button_text">I Agree</string>
+    <string name="import_error_unsupported">Unsupported content type</string>
 
 </resources>
