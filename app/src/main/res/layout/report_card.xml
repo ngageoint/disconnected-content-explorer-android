@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.v7.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:card_view="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/card_view"
+    android:layout_gravity="center"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    android:foreground="?android:attr/selectableItemBackground"
+    android:background="@drawable/cardrect"
+    card_view:cardCornerRadius="@dimen/cardview_default_radius"
+    card_view:cardElevation="3dp">
+
+    <ImageView
+        android:id="@+id/card_thumbnail"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:scaleType="centerCrop"/>
+
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginLeft="128dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginRight="8dp"
+        android:layout_toRightOf="@+id/card_thumbnail">
+
+        <TextView
+            android:id="@+id/card_title"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <TextView
+            android:id="@+id/card_description"
+            android:layout_marginTop="8dp"
+            android:textSize="12sp"
+            android:textStyle="normal"
+            android:layout_below="@+id/card_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <Button android:id="@+id/view_note_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/action_open_note"
+            android:clickable="true"
+            android:background="@android:color/transparent"
+            android:textColor="@color/buttonColor"
+            style="?android:attr/borderlessButtonStyle"/>
+    </LinearLayout>
+</android.support.v7.widget.CardView>

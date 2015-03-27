@@ -2,12 +2,34 @@
 <resources>
 
     <string name="app_name">DICE</string>
-    <string name="title_report_detail">Report Detail</string>
-    <string name="open_note">Open note</string>
+    <string name="title_activity_about">About DICE</string>
     <string name="title_activity_note">Note</string>
-    <string name="cancel_note">Cancel</string>
-    <string name="save_note">Save</string>
-    <string name="show_tiles">Tile View</string>
-    <string name="show_map">Map View</string>
+    <string name="title_activity_report_collection">DICE</string>
+    <string name="title_report_detail">Report Detail</string>
+    <string name="action_about">About DICE</string>
+    <string name="action_add_content">Add Content</string>
+    <string name="action_show_cards">Card View</string>
+    <string name="action_show_map">Map View</string>
+    <string name="action_open_note">Open note</string>
+    <string name="action_cancel_note">Cancel</string>
+    <string name="action_save_note">Save</string>
+    <string name="import_pending">Importing content...</string>
+    <string name="import_error">Error importing content</string>
+    <string name="disclaimer_title_text">Disclaimer</string>
+    <string name="disclaimer_text"><![CDATA[
+        <h1>Disclaimer:</h1>
+        <p>As a condition of downloading, accessing, or using the products, you agree to the terms of the NGA Disclaimer.</p>
+        <p>DISCLAIMER OF WARRANTIES AND LIMITATIONS ON LIABILITY.</p>
+        <p>NGA MAKES NO REPRESENTATIONS OR WARRANTIES REGARDING THE ACCURACY OR COMPLETENESS OF ANY CONTENT OF THE PRODUCTS.</p>
+        <p>USER AGREES, THROUGH USE OF THE PRODUCT, TO ASSUME ANY AND ALL LIABILITY FOR ANY DAMAGE OR LOSS RESULTING FROM YOUR USE OF THE CONTENT OR THE PRODUCTS AND HOLDS NGA HARMLESS FROM LIABILITY.</p>
+    ]]></string>
+    <string name="disclaimer_exit_button_text">Exit</string>
+    <string name="disclaimer_agree_button_text">I Agree</string>
+    <string name="import_error_unsupported">Unsupported content type</string>
+    <string name="no_viewer_for_report">No app to view content</string>
+    <string name="note_saved">Note saved</string>
+    <string name="note_save_error">Problem saving note</string>
+    <string name="note_load_error">Problem loading note</string>
+    <string name="choose_unsupported_content_viewer">View %s with ...</string>
 
 </resources>

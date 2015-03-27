@@ -12,18 +12,29 @@ project.ext {
 }
 
 android {
-    compileSdkVersion 19
-    buildToolsVersion '20.0.0'
+    compileSdkVersion 21
+    buildToolsVersion '21.1.2'
     defaultConfig {
-        applicationId 'mil.nga.dice'
-        minSdkVersion 14
-        targetSdkVersion 19
-        testApplicationId 'mil.nga.dice.test'
+        minSdkVersion 16
+        targetSdkVersion 18
+        versionCode 1
+        versionName "1.0"
+        applicationId 'mil.nga.giat.dice'
+        testApplicationId 'mil.nga.giat.dice.test'
+    }
+    signingConfigs {
+        release {
+            storeFile file(RELEASE_STORE_FILE)
+            storePassword RELEASE_STORE_PASSWORD
+            keyAlias RELEASE_KEY_ALIAS
+            keyPassword RELEASE_KEY_PASSWORD
+        }
     }
     buildTypes {
         release {
-            runProguard false
+            minifyEnabled false
             proguardFiles(getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt')
+            signingConfig signingConfigs.release
         }
     }
     packagingOptions {
@@ -45,12 +56,13 @@ android {
 
 
 dependencies {
-    compile 'com.android.support:support-v4:21.0.0'
-    compile 'com.google.android.gms:play-services:6.1.11'
-    compile files('libs/jackson-annotations-2.3.3.jar')
-    compile files('libs/jackson-core-2.3.3.jar')
-    compile files('libs/jackson-databind-2.3.3.jar')
-    compile files('libs/jts-1.8.jar')
+    compile 'com.android.support:support-v4:21.0.3'
+    compile 'com.google.android.gms:play-services:6.5.87'
+    compile 'com.android.support:appcompat-v7:21.0.+'
+    compile 'com.android.support:cardview-v7:21.0.3'
+    compile 'com.android.support:recyclerview-v7:21.0.+'
+    compile 'com.vividsolutions:jts:1.13'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.5.1'
 
     androidTestCompile 'org.hamcrest:hamcrest-core:1.3'
 }

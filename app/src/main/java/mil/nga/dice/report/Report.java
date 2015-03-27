@@ -1,14 +1,15 @@
 package mil.nga.dice.report;
 
+import android.net.Uri;
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.util.Log;
 
 import java.io.File;
-import java.io.FileDescriptor;
 
 public class Report implements Parcelable {
-	private File sourceFile;
+	private Uri sourceFile;
+    private String sourceFileName;
+    private long sourceFileSize;
 	private File path;
 	private String title;
 	private String description;
@@ -24,20 +25,43 @@ public class Report implements Parcelable {
 
 
 	public String toString() {
-		return this.title;
+        return "Report: " + title + " (id:" + id + ")";
 	}
 
 	/**
-	 * Return the absolute path to the original file from which this report was created, e.g., a downloaded zip file.
-	 * @return
+	 * Return the {@link android.net.Uri Uri} path to the original file from which this report was imported, e.g., a downloaded zip file.
+     * This will most likely be either a file:// URI or content:// URI.
+	 * @return {@link String} or null
 	 */
-	public File getSourceFile() {
+	public Uri getSourceFile() {
 		return sourceFile;
 	}
 
-	public void setSourceFile(File x) {
+	public void setSourceFile(Uri x) {
 		sourceFile = x;
 	}
+
+    /**
+     * Return the human-relevant file name of the {@link #getSourceFile() source file}.  If the source file URI is a file:// URI, this will be the last
+     * component of that URI path.  If the source file is a content:// URI, this value would have been retrieved through the
+     * {@link android.content.ContentResolver} API, or set to some other meaningful name.
+     * @return {@link String} or null
+     */
+    public String getSourceFileName() {
+        return sourceFileName;
+    }
+
+    public void setSourceFileName(String x) {
+        sourceFileName = x;
+    }
+
+    public long getSourceFileSize() {
+        return sourceFileSize;
+    }
+
+    public void setSourceFileSize(long x) {
+        sourceFileSize = x;
+    }
 
 	public String getTitle() {
 		return title;
@@ -63,12 +87,8 @@ public class Report implements Parcelable {
 		this.thumbnail = thumbnail;
 	}
 
-	public String getFileName() {
-		return sourceFile.getName();
-	}
-	
 	public String getFileExtension() {
-		String fileName = getFileName();
+		String fileName = getSourceFileName();
 		int lastDot = fileName.lastIndexOf(".");
 		if (lastDot > -1 && lastDot < fileName.length() - 1) {
 			return fileName.substring(lastDot + 1);
@@ -77,7 +97,8 @@ public class Report implements Parcelable {
 	}
 
 	/**
-	 * Return the absolute path to the report content.
+	 * Return the absolute path to the report content.  For a typical HTML-based report from a zip file, this should the path to the root directory of the
+     * Web content.  For single file formats like PDF, this will be the path directly to that file.
 	 * @return
 	 */
 	public File getPath() {
@@ -138,35 +159,42 @@ public class Report implements Parcelable {
 		if (description != null)
 			parcel.writeString(description);
 		else
-			parcel.writeString(null);
+			parcel.writeValue(null);
 
 		parcel.writeByte((byte) (enabled ? 1 : 0));
 
 		if (error != null)
 			parcel.writeString(error);
 		else
-			parcel.writeString(null);
+			parcel.writeValue(null);
 
 		if (id != null)
 			parcel.writeString(id);
 		else
-			parcel.writeString(null);
+			parcel.writeValue(null);
 
 		parcel.writeValue(lat);
 
 		parcel.writeValue(lon);
 
-		if (path != null)
-			parcel.writeString(path.getAbsolutePath());
-		else
-			parcel.writeString(null);
+        if (path != null)
+            parcel.writeString(path.getAbsolutePath());
+        else
+            parcel.writeValue(null);
 
-		if (sourceFile != null)
-			parcel.writeString(sourceFile.getAbsolutePath());
-		else
-			parcel.writeString(null);
+        if (sourceFile != null)
+            parcel.writeValue(sourceFile);
+        else
+            parcel.writeValue(null);
 
-		if (thumbnail != null)
+        if (sourceFileName != null)
+            parcel.writeString(sourceFileName);
+        else
+            parcel.writeValue(null);
+
+        parcel.writeLong(sourceFileSize);
+
+        if (thumbnail != null)
 			parcel.writeString(thumbnail);
 		else
 			parcel.writeValue(null);
@@ -175,27 +203,27 @@ public class Report implements Parcelable {
 			parcel.writeString(title);
 		else
 			parcel.writeValue(null);
+
 	}
 
 	public static final Parcelable.Creator<Report> CREATOR = new Creator<Report> () {
 		@Override
 		public Report createFromParcel(Parcel source) {
 			Report report = new Report();
-			Object value;
+
 			report.description = source.readString();
 			report.enabled = source.readByte() != 0;
 			report.error = source.readString();
 			report.id = source.readString();
 			report.lat = (Double) source.readValue(null);
 			report.lon = (Double) source.readValue(null);
-			value = source.readString();
-			if (value != null && !value.toString().isEmpty()) {
-				report.path = new File(value.toString());
-			}
-			value = source.readString();
-			if (value != null && !value.toString().isEmpty()) {
-				report.sourceFile = new File(value.toString());
-			}
+            Object value = source.readString();
+            if (value != null) {
+                report.path = new File((String) value);
+            }
+            report.sourceFile = (Uri) source.readValue(null);
+            report.sourceFileName = source.readString();
+            report.sourceFileSize = source.readLong();
 			report.thumbnail = source.readString();
 			report.title = source.readString();
 			return report;
