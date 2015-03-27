@@ -192,6 +192,10 @@ public class ReportManager implements ReportImportCallbacks {
         return null;
     }
 
+    public File getReportsDir() {
+        return reportsDir;
+    }
+
     public File getNotesDir() {
         return notesDir;
     }
