@@ -23,7 +23,7 @@ android {
         testApplicationId 'mil.nga.giat.dice.test'
     }
     signingConfigs {
-        release {
+        fromProperties {
             storeFile file(RELEASE_STORE_FILE)
             storePassword RELEASE_STORE_PASSWORD
             keyAlias RELEASE_KEY_ALIAS
@@ -31,10 +31,13 @@ android {
         }
     }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.fromProperties
+        }
         release {
             minifyEnabled false
             proguardFiles(getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt')
-            signingConfig signingConfigs.release
+            signingConfig signingConfigs.fromProperties
         }
     }
     packagingOptions {

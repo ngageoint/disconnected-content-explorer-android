@@ -1,5 +1,6 @@
 package mil.nga.dice.report.tests;
 
+import android.net.Uri;
 import android.os.Environment;
 import android.os.Parcel;
 import android.test.suitebuilder.annotation.MediumTest;
@@ -24,7 +25,7 @@ public class ReportTest extends TestCase {
         r.setLat(20.0);
         r.setLon(100.0);
         r.setPath(new File(Environment.getExternalStorageDirectory(), "test/reports/test_report"));
-        r.setSourceFile(new File(Environment.getExternalStorageDirectory(), "test/report.zip"));
+        r.setSourceFile(Uri.fromFile(new File(Environment.getExternalStorageDirectory(), "test/report.zip")));
         r.setThumbnail("thumbnail");
         r.setTitle("Test Report");
 
