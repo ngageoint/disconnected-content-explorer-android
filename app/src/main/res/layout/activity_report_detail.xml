@@ -1,7 +1,18 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/report_detail_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ReportDetailActivity"
-    tools:ignore="MergeRootFrame" />
+    tools:ignore="MergeRootFrame">
+
+    <WebView android:id="@+id/report_detail"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="0dp"
+        android:textIsSelectable="true"
+        style="?android:attr/textAppearanceLarge"
+        />
+
+</FrameLayout>

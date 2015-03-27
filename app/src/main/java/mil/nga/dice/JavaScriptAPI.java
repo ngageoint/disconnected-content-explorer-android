@@ -13,6 +13,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 import mil.nga.dice.report.Report;
+import mil.nga.dice.report.ReportManager;
+
 import com.fangjian.WebViewJavascriptBridge;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -24,15 +26,19 @@ import com.google.android.gms.location.LocationServices;
 
  */
 public class JavaScriptAPI implements ConnectionCallbacks, OnConnectionFailedListener {
-    Activity mActivity;
-    Report mReport;
-    WebView mWebView;
     private static final String TAG = "JavaScriptAPI";
-    File root = Environment.getExternalStorageDirectory();
-    File exportDirectory = new File(root.getPath() + "/DICE/export");
-    WebViewJavascriptBridge bridge;
-    GoogleApiClient mGoogleApiClient;
-    Location mLocation;
+
+    public static void addTo(WebView webView, Report report, Activity context) {
+        new JavaScriptAPI(context, report, webView);
+    }
+
+    private Activity mActivity;
+    private Report mReport;
+    private WebView mWebView;
+    private File exportDirectory = new File(ReportManager.getInstance().getReportsDir(), "export");
+    private WebViewJavascriptBridge bridge;
+    private GoogleApiClient mGoogleApiClient;
+    private Location mLocation;
 
 
     public JavaScriptAPI(Activity a, Report r, WebView w) {
@@ -63,7 +69,7 @@ public class JavaScriptAPI implements ConnectionCallbacks, OnConnectionFailedLis
             public void handle(String data, WebViewJavascriptBridge.WVJBResponseCallback jsCallback) {
                 Log.i(TAG, "Bridge received a call to export data");
                 if (jsCallback != null) {
-                    File export = new File(exportDirectory.getPath() + "/" + mReport.getTitle() + "_export.json");
+                    File export = new File(exportDirectory, mReport.getTitle() + "_export.json");
 
                     if (!exportDirectory.exists()) {
                         exportDirectory.mkdir();
