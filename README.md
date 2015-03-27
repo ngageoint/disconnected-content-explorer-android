@@ -14,7 +14,7 @@ If you'd like to contribute to this project, please make a pull request. We'll r
 Software source code previously released under an open source license and then modified by NGA staff is considered a "joint work" (see 17 USC § 101); it is partially copyrighted, partially public domain, and as a whole is protected by the copyrights of the non-government authors and must be released according to the terms of the original open source license.
 
 ###Screenshots
-When content is loaded into the DICE apps documents folder using iTunes file sharing it will be automatically detected by DICE and presented in a list, grid, or map view (depending on the view selected by the user).
+When content is loaded into the DICE apps' documents folder using Android file sharing it will be automatically detected by DICE and presented in a list, grid, or map view (depending on the view selected by the user).
 
 ![DICE1] (https://cloud.githubusercontent.com/assets/1292665/4799887/93498160-5e20-11e4-90f3-42080de4225a.png)
 
