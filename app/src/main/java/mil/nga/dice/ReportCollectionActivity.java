@@ -139,7 +139,7 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
             Uri reportUri = Uri.fromFile(reportPath);
             String contentType = getContentResolver().getType(reportUri);
             if (contentType == null) {
-                String ext = MimeTypeMap.getFileExtensionFromUrl(reportUri.toString());
+                String ext = MimeTypeMap.getFileExtensionFromUrl(reportUri.getEncodedPath());
                 if (ext != null) {
                     contentType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext);
                 }
