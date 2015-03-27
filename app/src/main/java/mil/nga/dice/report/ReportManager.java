@@ -252,6 +252,7 @@ public class ReportManager implements ReportImportCallbacks {
     public void importComplete(Report report) {
         ReportDescriptorUtil.readDescriptorAndUpdateReport(report);
         deleteSourceFileIfInDropbox(report);
+        removeDuplicatesOf(report);
         report.setEnabled(true);
         broadcastUpdateReportList();
     }
@@ -472,6 +473,16 @@ public class ReportManager implements ReportImportCallbacks {
         File sourceFile = new File(report.getSourceFile().getPath());
         if (reportsDir.equals(sourceFile.getParentFile()) && !sourceFile.equals(report.getPath()) /* when dropbox and reports dir are the same */ ) {
             renameThenDeleteInBackground(sourceFile);
+        }
+    }
+
+    private void removeDuplicatesOf(Report report) {
+        Iterator<Report> reportIterator = reports.iterator();
+        while (reportIterator.hasNext()) {
+            Report dup = reportIterator.next();
+            if (dup != report && report.getPath().equals(dup.getPath())) {
+                reportIterator.remove();
+            }
         }
     }
 
