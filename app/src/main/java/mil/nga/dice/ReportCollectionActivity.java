@@ -45,7 +45,7 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
     
     public static final String TAG = "ReportCollection";
     
-    public static final String HIDE_DISCLAIMER_KEY = "hide_disclaimer";
+    private static final String PREF_SHOW_DISCLAIMER = "show_disclaimer";
 
     private static Boolean showDisclaimer = null;
 
@@ -59,13 +59,13 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
 
         setContentView(R.layout.activity_report_collection);
 
-        if (showDisclaimer == null) {
+        if (showDisclaimer == null || savedInstanceState == null) {
             SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-            showDisclaimer = preferences.getBoolean(HIDE_DISCLAIMER_KEY, true);
+            showDisclaimer = preferences.getBoolean(PREF_SHOW_DISCLAIMER, true);
         }
         if (showDisclaimer) {
-            showDisclaimer = false;
-            DisclaimerDialogFragment dialogFragment = DisclaimerDialogFragment.newInstance();
+            DisclaimerDialogFragment dialogFragment = new DisclaimerDialogFragment();
+            dialogFragment.setCancelable(false);
             dialogFragment.show(getSupportFragmentManager(), "ReportCollectionActivity");
         }
 
@@ -162,10 +162,21 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
     }
 
     @Override
-    public void onDisclaimerDialogDismissed(boolean exitApplication) {
-        if (exitApplication) {
-            finish();
-        }
+    public void onDisclaimerDialogAgree(DisclaimerDialogFragment disclaimerDialog) {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        SharedPreferences.Editor editor = preferences.edit();
+        boolean show = disclaimerDialog.isShowDisclaimerChecked();
+        editor.putBoolean(PREF_SHOW_DISCLAIMER, show);
+        editor.commit();
+    }
+
+    @Override
+    public void onDisclaimerDialogDisagree(DisclaimerDialogFragment disclaimerDialog) {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.remove(PREF_SHOW_DISCLAIMER);
+        editor.commit();
+        finish();
     }
 
     @Override
