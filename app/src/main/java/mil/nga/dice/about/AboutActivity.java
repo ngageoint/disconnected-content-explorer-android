@@ -1,5 +1,7 @@
 package mil.nga.dice.about;
 
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.PersistableBundle;
 import android.support.v7.app.ActionBarActivity;
@@ -24,7 +26,17 @@ public class AboutActivity extends ActionBarActivity {
         aboutWebView.getSettings().setJavaScriptEnabled(true);
 
         if (savedInstanceState == null) {
-            aboutWebView.loadUrl("file:///android_asset/legal/legal.html");
+            String aboutUrl = "file:///android_asset/legal/legal.html";
+            try {
+                PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
+                String version = info.versionName + "." + info.versionCode;
+                aboutUrl += "?version=" + version;
+            }
+            catch (PackageManager.NameNotFoundException e) {
+                // hmmm
+                e.printStackTrace();
+            }
+            aboutWebView.loadUrl(aboutUrl);
         }
         else {
             aboutWebView.restoreState(savedInstanceState);
