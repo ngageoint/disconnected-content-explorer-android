@@ -59,11 +59,12 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
 
         setContentView(R.layout.activity_report_collection);
 
-        if (showDisclaimer == null || savedInstanceState == null) {
+        if (showDisclaimer == null) {
             SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
             showDisclaimer = preferences.getBoolean(PREF_SHOW_DISCLAIMER, true);
         }
         if (showDisclaimer) {
+            showDisclaimer = false; // don't show it again while the process lives
             DisclaimerDialogFragment dialogFragment = new DisclaimerDialogFragment();
             dialogFragment.setCancelable(false);
             dialogFragment.show(getSupportFragmentManager(), "ReportCollectionActivity");
@@ -75,6 +76,16 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
         if (savedInstanceState == null && !handlingAddContent) {
             handleIntentData(getIntent());
         }
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
     }
 
     @Override
@@ -172,6 +183,7 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
 
     @Override
     public void onDisclaimerDialogDisagree(DisclaimerDialogFragment disclaimerDialog) {
+        showDisclaimer = true;
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         SharedPreferences.Editor editor = preferences.edit();
         editor.remove(PREF_SHOW_DISCLAIMER);

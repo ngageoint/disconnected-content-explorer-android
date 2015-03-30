@@ -39,7 +39,7 @@ public class AboutActivity extends ActionBarActivity {
     @Override
     public boolean onNavigateUp() {
         if (aboutWebView.canGoBack()) {
-            onBackPressed();
+            aboutWebView.goBack();
             return false;
         }
         return super.onNavigateUp();
