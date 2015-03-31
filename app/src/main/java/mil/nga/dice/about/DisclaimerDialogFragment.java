@@ -126,7 +126,7 @@ public class DisclaimerDialogFragment extends DialogFragment{
             return disclaimer;
         }
         catch (Exception e) {
-            throw new Error("error loading legal disclaimer");
+            throw new Error("error loading legal disclaimer", e);
         }
     }
 }
