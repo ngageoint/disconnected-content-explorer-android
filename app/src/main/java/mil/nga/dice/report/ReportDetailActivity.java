@@ -22,6 +22,7 @@ public class ReportDetailActivity extends ActionBarActivity {
 	
 	Report mReport;
     WebView reportWebView;
+    JavaScriptAPI jsApi;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -41,7 +42,7 @@ public class ReportDetailActivity extends ActionBarActivity {
 
         File reportFile = new File(mReport.getPath(), "index.html");
         if (reportFile.canRead() && reportFile.length() > 0) {
-            JavaScriptAPI.addTo(reportWebView, mReport, this);
+            jsApi = JavaScriptAPI.addTo(reportWebView, mReport, this);
             if (savedInstanceState == null) {
                 reportWebView.loadUrl(Uri.fromFile(reportFile).toString());
             }
@@ -135,6 +136,8 @@ public class ReportDetailActivity extends ActionBarActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        jsApi.removeFromWebView();
     }
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
