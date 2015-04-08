@@ -28,7 +28,7 @@ import javax.xml.transform.stream.StreamSource;
 
 import mil.nga.dice.R;
 
-public class DisclaimerDialogFragment extends DialogFragment{
+public class DisclaimerDialogFragment extends DialogFragment {
 
     private CheckBox showDisclaimerCheckBox;
     private View view;
@@ -50,7 +50,7 @@ public class DisclaimerDialogFragment extends DialogFragment{
     @Override
     public Dialog onCreateDialog(Bundle savedInstance) {
         view =  getActivity().getLayoutInflater().inflate(R.layout.fragment_dialog, null);
-        view.setMinimumWidth((int)(500 * getResources().getDisplayMetrics().density));
+        view.setMinimumWidth((int) (500 * getResources().getDisplayMetrics().density));
         view.setMinimumHeight((int) (400 * getResources().getDisplayMetrics().density));
 
         String disclaimer = loadDisclaimer();
