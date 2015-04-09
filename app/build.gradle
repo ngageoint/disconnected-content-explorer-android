@@ -1,9 +1,3 @@
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
-
-import static com.android.builder.model.AndroidProject.FD_INTERMEDIATES
-
-
 apply plugin: 'com.android.application'
 
 
@@ -18,7 +12,7 @@ android {
         minSdkVersion 16
         targetSdkVersion 18
         versionCode 7
-        versionName "1.0"
+        versionName '1.0'
         applicationId 'mil.nga.giat.dice'
         testApplicationId 'mil.nga.giat.dice.test'
     }
@@ -70,45 +64,3 @@ dependencies {
     androidTestCompile 'org.hamcrest:hamcrest-core:1.3'
 }
 
-task zipTestReports << {
-    FileTree resTree = ((FileTree)android.sourceSetsContainer.androidTest.resources.sourceFiles).matching {
-        it.include 'test_reports/*'
-    }
-    resTree.visit { FileVisitDetails reportRoot ->
-        if (reportRoot.file.parent =~ /^.*test_reports/) {
-            println "zipping test report from ${reportRoot.file.path}"
-            buildZip reportRoot.file
-        }
-    }
-}
-
-project.tasks.whenTaskAdded { Task t ->
-    if (t.name == 'processDebugTestJavaRes') {
-        t.dependsOn zipTestReports
-    }
-}
-
-def buildZip(File rootDir) {
-    File destFile = new File("$project.buildDir/${FD_INTERMEDIATES}/javaResources/${android.testVariants[0].dirName}/${rootDir.name}.zip".toString());
-    destFile.parentFile.mkdirs()
-    destFile.createNewFile()
-    try {
-        ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(destFile));
-        zipOut.putNextEntry(new ZipEntry(rootDir.getName()));
-        for (File file : rootDir.listFiles()) {
-            zipOut.putNextEntry(new ZipEntry(rootDir.getName() + "/" + file.getName()));
-            byte[] fileBytes = new byte[1 << 20];
-            int readCount;
-            FileInputStream fileIn = new FileInputStream(file);
-            while ((readCount = fileIn.read(fileBytes, 0, fileBytes.length)) >= 0) {
-                zipOut.write(fileBytes, 0, readCount);
-            }
-            zipOut.closeEntry();
-        }
-        zipOut.close();
-        return destFile;
-    }
-    catch (IOException e) {
-        throw new Error(e);
-    }
-}
