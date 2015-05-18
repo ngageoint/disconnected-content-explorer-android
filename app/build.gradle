@@ -5,6 +5,9 @@ project.ext {
     archivesBaseName = 'dice'
 }
 
+Properties localProperties = new Properties()
+localProperties.load(project.rootProject.file('local.properties').newDataInputStream())
+
 android {
     compileSdkVersion 21
     buildToolsVersion '21.1.2'
@@ -18,20 +21,24 @@ android {
     }
     signingConfigs {
         fromProperties {
-            storeFile file(RELEASE_STORE_FILE)
-            storePassword RELEASE_STORE_PASSWORD
-            keyAlias RELEASE_KEY_ALIAS
-            keyPassword RELEASE_KEY_PASSWORD
+            storeFile file(localProperties.signKeyStore ? localProperties.signKeyStore : 'does_not_exist')
+            storePassword localProperties.signKeyStorePassword
+            keyAlias localProperties.signKeyAlias
+            keyPassword localProperties.signKeyPassword
         }
     }
     buildTypes {
         debug {
-            signingConfig signingConfigs.fromProperties
+            if (signingConfigs.fromProperties.storeFile.exists()) {
+                signingConfig signingConfigs.fromProperties
+            }
         }
         release {
             minifyEnabled false
             proguardFiles(getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt')
-            signingConfig signingConfigs.fromProperties
+            if (signingConfigs.fromProperties.storeFile.exists()) {
+                signingConfig signingConfigs.fromProperties
+            }
         }
     }
     packagingOptions {
