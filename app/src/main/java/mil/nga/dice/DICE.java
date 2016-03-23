@@ -4,6 +4,7 @@ import android.app.Application;
 import android.content.pm.ApplicationInfo;
 import android.os.Build;
 import android.os.Environment;
+import android.support.multidex.MultiDexApplication;
 import android.util.Log;
 import android.webkit.WebView;
 
@@ -15,7 +16,7 @@ import mil.nga.dice.map.BackgroundTileProvider;
 import mil.nga.dice.map.OfflineMap;
 import mil.nga.dice.report.ReportManager;
 
-public class DICE extends Application {
+public class DICE extends MultiDexApplication {
 
     @Override
     public void onCreate() {

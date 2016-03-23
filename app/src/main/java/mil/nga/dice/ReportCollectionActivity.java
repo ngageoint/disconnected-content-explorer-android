@@ -3,6 +3,7 @@ package mil.nga.dice;
 import android.content.ClipData;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -13,15 +14,18 @@ import android.view.MenuItem;
 import android.webkit.MimeTypeMap;
 import android.widget.Toast;
 
+import com.ipaulpro.afilechooser.utils.FileUtils;
+
 import java.io.File;
 
+import mil.nga.dice.about.AboutActivity;
 import mil.nga.dice.about.DisclaimerDialogFragment;
 import mil.nga.dice.cardview.CardViewFragment;
+import mil.nga.dice.io.DICEFileUtils;
 import mil.nga.dice.map.ReportMapFragment;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
 import mil.nga.dice.report.ReportManager;
-import mil.nga.dice.about.AboutActivity;
 
 /**
  * <h3>TODO:</h3>
@@ -47,17 +51,33 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
     
     private static final String PREF_SHOW_DISCLAIMER = "show_disclaimer";
 
+    /**
+     * Permissions request code for importing a GeoPackage as an external link
+     */
+    public static final int PERMISSIONS_REQUEST_IMPORT_GEOPACKAGE = 200;
+
+    /**
+     * Intent activity request code when opening app settings
+     */
+    public static final int ACTIVITY_APP_SETTINGS = 3344;
+
     private static Boolean showDisclaimer = null;
 
     private int currentViewId = 0;
     private boolean handlingAddContent = false;
 
+    /**
+     * GeoPackage cache for importing GeoPackage files used to open DICE
+     */
+    private GeoPackageCache geoPackageCache;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_report_collection);
+
+        geoPackageCache = new GeoPackageCache(this);
 
         if (showDisclaimer == null) {
             SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -193,11 +213,25 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (resultCode != RESULT_OK) {
-            return;
+        boolean handled = true;
+
+        switch (requestCode) {
+
+            case ACTIVITY_APP_SETTINGS:
+                break;
+
+            default:
+                handled = false;
         }
 
-        handleIntentData(data);
+        if (!handled) {
+            if (resultCode != RESULT_OK) {
+                return;
+            }
+
+            handleIntentData(data);
+        }
+
     }
     
     private void handleIntentData(Intent intent) {
@@ -218,7 +252,17 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
             // TODO: deep linking to specific report: navigateToReport(uri)
         }
         else {
-            ReportManager.getInstance().importReportFromUri(uri);
+            // Attempt to get a file path and display name
+            String path = FileUtils.getPath(this, uri);
+            String name = DICEFileUtils.getDisplayName(this, uri, path);
+
+            // If a GeoPackage file
+            if(geoPackageCache.hasGeoPackageExtension(name)){
+                geoPackageCache.importFile(name, uri, path);
+            }else{
+                // Attempt to import a report
+                ReportManager.getInstance().importReportFromUri(uri);
+            }
         }
     }
 
@@ -269,4 +313,23 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
     private void startAboutActivity() {
         startActivity(new Intent(this, AboutActivity.class));
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+
+        // Check if permission was granted
+        boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+
+        switch(requestCode) {
+
+            case PERMISSIONS_REQUEST_IMPORT_GEOPACKAGE:
+                geoPackageCache.importGeoPackageExternalLinkAfterPermissionGranted(granted);
+                break;
+
+        }
+    }
+
 }
