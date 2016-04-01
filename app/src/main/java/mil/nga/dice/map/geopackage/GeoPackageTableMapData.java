@@ -51,7 +51,7 @@ public class GeoPackageTableMapData {
      *
      *  @param name table name
      */
-    public void GeoPackageTableMapData(String name){
+    public GeoPackageTableMapData(String name){
         this.name = name;
         projection = ProjectionFactory.getProjection(ProjectionConstants.EPSG_WORLD_GEODETIC_SYSTEM);
     }

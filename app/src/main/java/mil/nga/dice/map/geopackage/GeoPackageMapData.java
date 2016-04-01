@@ -31,7 +31,7 @@ public class GeoPackageMapData {
      *
      *  @param name GeoPackage name
      */
-    public void GeoPackageMapData(String name){
+    public GeoPackageMapData(String name){
         this.name = name;
     }
 
