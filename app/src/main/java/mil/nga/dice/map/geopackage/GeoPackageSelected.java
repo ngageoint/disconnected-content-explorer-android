@@ -38,8 +38,7 @@ public class GeoPackageSelected {
      * @return selected caches
      */
     public Set<String> getSelectedSet() {
-        Editor editor = settings.edit();
-        return getSelectedSet(editor);
+        return settings.getStringSet(DICEConstants.DICE_SELECTED_CACHES, new HashSet<String>());
     }
 
     /**
@@ -48,8 +47,7 @@ public class GeoPackageSelected {
      * @return selected cache and table map
      */
     public Map<String, Set<String>> getSelectedMap() {
-        Editor editor = settings.edit();
-        Set<String> selectedSet = getSelectedSet(editor);
+        Set<String> selectedSet = settings.getStringSet(DICEConstants.DICE_SELECTED_CACHES, new HashSet<String>());
         Map<String, Set<String>> selectedMap = new HashMap<>();
         for (String selected : selectedSet) {
             Set<String> selectedTables = settings.getStringSet(selected, new HashSet<String>());
@@ -59,14 +57,18 @@ public class GeoPackageSelected {
     }
 
     /**
-     * Get the selected set of caches
+     * Add selected cache
      *
-     * @param editor editor
-     * @return selected set
+     * @param cache
      */
-    private Set<String> getSelectedSet(Editor editor) {
-        Set<String> selected = settings.getStringSet(DICEConstants.DICE_SELECTED_CACHES, new HashSet<String>());
-        return new HashSet<>(selected);
+    public void addSelected(String cache) {
+
+        Set<String> currentSelectedSet = settings.getStringSet(DICEConstants.DICE_SELECTED_CACHES, new HashSet<String>());
+        currentSelectedSet.add(cache);
+
+        Editor editor = settings.edit();
+        editor.putStringSet(DICEConstants.DICE_SELECTED_CACHES, currentSelectedSet);
+        editor.commit();
     }
 
     /**
@@ -75,7 +77,22 @@ public class GeoPackageSelected {
      * @param selected
      */
     public void updateSelected(Map<String, Set<String>> selected) {
-        // TODO
+
+        Set<String> currentSelectedSet = settings.getStringSet(DICEConstants.DICE_SELECTED_CACHES, new HashSet<String>());
+
+        Editor editor = settings.edit();
+        editor.putStringSet(DICEConstants.DICE_SELECTED_CACHES, selected.keySet());
+
+        for (Map.Entry<String, Set<String>> selectedEntry : selected.entrySet()) {
+            currentSelectedSet.remove(selectedEntry.getKey());
+            editor.putStringSet(selectedEntry.getKey(), selectedEntry.getValue());
+        }
+
+        for (String currentSelected : currentSelectedSet) {
+            editor.remove(currentSelected);
+        }
+
+        editor.commit();
     }
 
 }

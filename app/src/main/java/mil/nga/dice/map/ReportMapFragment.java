@@ -31,6 +31,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import mil.nga.dice.R;
+import mil.nga.dice.map.geopackage.GeoPackageMapOverlays;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
 import mil.nga.dice.report.ReportManager;
@@ -48,6 +49,7 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
     private MapView mapView;
     private GoogleMap map;
     private OfflineMap offlineMap;
+    private GeoPackageMapOverlays geoPackageMapOverlays;
 
 
 	public ReportMapFragment() {}
@@ -104,6 +106,8 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
 				reportMarkers.add(map.addMarker(marker));
 			}
 		}
+
+        geoPackageMapOverlays.updateMap();
 	}
 	
 	@Override
@@ -192,6 +196,8 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
 
         offlineMap = new OfflineMap(map);
         offlineMap.setVisible(true);
+
+        geoPackageMapOverlays = new GeoPackageMapOverlays(getActivity(), mapView, map);
 
         refreshMapMarkers();
     }

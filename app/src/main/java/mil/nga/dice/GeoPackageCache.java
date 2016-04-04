@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.InputStream;
 
 import mil.nga.dice.io.DICEFileUtils;
+import mil.nga.dice.map.geopackage.GeoPackageSelected;
 import mil.nga.geopackage.GeoPackageManager;
 import mil.nga.geopackage.factory.GeoPackageFactory;
 import mil.nga.geopackage.io.GeoPackageIOUtils;
@@ -62,6 +63,11 @@ public class GeoPackageCache {
     private String importExternalPath;
 
     /**
+     * Selected GeoPackages
+     */
+    private GeoPackageSelected selected;
+
+    /**
      * Constructor
      *
      * @param activity
@@ -69,6 +75,7 @@ public class GeoPackageCache {
     public GeoPackageCache(Activity activity) {
         this.activity = activity;
         this.manager = GeoPackageFactory.getManager(activity);
+        this.selected = new GeoPackageSelected(activity);
     }
 
     /**
@@ -158,7 +165,9 @@ public class GeoPackageCache {
      */
     private void importGeoPackageExternalLink(final String name, final Uri uri, String path) {
 
-        manager.importGeoPackageAsExternalLink(path, name, true);
+        if(manager.importGeoPackageAsExternalLink(path, name, true)){
+            selected.addSelected(name);
+        }
 
     }
 
@@ -306,6 +315,8 @@ public class GeoPackageCache {
                 showMessage("Import",
                         "Failed to import: "
                                 + (path != null ? path : uri.getPath()));
+            }else{
+                selected.addSelected(database);
             }
         }
 
