@@ -32,6 +32,6 @@
     <string name="import_label">Import</string>
     <string name="storage_access_rational_title">Use <font color='#DD000000'>DICE</font> storage services</string>
     <string name="storage_access_rational_message">DICE allows you to read files from external storage</string>
-
+    <string name="map_overlays_button">Overlays</string>
 
 </resources>

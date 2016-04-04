@@ -12,4 +12,28 @@
         map:uiRotateGestures="false"
         map:uiTiltGestures="false" />
 
+    <LinearLayout
+        android:id="@+id/mapOverlays"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginRight="5dp"
+        android:layout_marginTop="5dp"
+        android:visibility="visible" >
+
+        <ImageButton
+            android:id="@+id/mapOverlaysButton"
+            style="?android:attr/buttonStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="1dp"
+            android:layout_marginTop="2dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/map_overlays_button"
+            android:scaleX=".77"
+            android:scaleY=".77"
+            android:src="@drawable/ic_tiles" />
+    </LinearLayout>
+
 </RelativeLayout>
