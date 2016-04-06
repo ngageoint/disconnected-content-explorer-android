@@ -61,6 +61,8 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
      */
     public static final int ACTIVITY_APP_SETTINGS = 3344;
 
+    public static final int OVERLAYS_ACTIVITY = 100;
+
     private static Boolean showDisclaimer = null;
 
     private int currentViewId = 0;
@@ -220,6 +222,10 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
             case ACTIVITY_APP_SETTINGS:
                 break;
 
+            case OVERLAYS_ACTIVITY:
+                // TODO
+                break;
+
             default:
                 handled = false;
         }
@@ -233,7 +239,7 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
         }
 
     }
-    
+
     private void handleIntentData(Intent intent) {
         Uri uri = intent.getData();
         if (uri == null) {

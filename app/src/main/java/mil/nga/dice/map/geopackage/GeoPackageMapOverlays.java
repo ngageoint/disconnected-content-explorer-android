@@ -12,6 +12,7 @@ import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.google.android.gms.maps.model.TileProvider;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -83,6 +84,11 @@ public class GeoPackageMapOverlays {
     private Map<String, GeoPackageMapData> mapData = new HashMap<>();
 
     /**
+     * GeoPackage list
+     */
+    private List<GeoPackageMapData> mapDataList = new ArrayList<>();
+
+    /**
      * Current map selected report
      */
     private Report selectedReport;
@@ -99,6 +105,10 @@ public class GeoPackageMapOverlays {
 
     /**
      * Constructor
+     *
+     * @param context
+     * @param map
+     * @param mapView
      */
     public GeoPackageMapOverlays(Context context, MapView mapView, GoogleMap map) {
         this.context = context;
@@ -123,6 +133,22 @@ public class GeoPackageMapOverlays {
             Log.e(GeoPackageMapOverlays.class.getSimpleName(), "Failed to find shared GeoPackage count", e);
         }
         return geoPackages != null && !geoPackages.isEmpty();
+    }
+
+    /**
+     * Get the map data
+     * @return map data
+     */
+    public Map<String, GeoPackageMapData> getMapData() {
+        return mapData;
+    }
+
+    /**
+     * Get the map data list
+     * @return map data list
+     */
+    public List<GeoPackageMapData> getMapDataList(){
+        return mapDataList;
     }
 
     /**
@@ -252,7 +278,7 @@ public class GeoPackageMapOverlays {
         }
 
         // Remove GeoPackage tables from the map that are no longer selected
-        for (GeoPackageMapData oldGeoPackageMapData : mapData.values()) {
+        for (GeoPackageMapData oldGeoPackageMapData : mapDataList) {
 
             GeoPackageMapData newGeoPackageMapData = newMapData.get(oldGeoPackageMapData.getName());
             if (newGeoPackageMapData == null) {
@@ -272,6 +298,7 @@ public class GeoPackageMapOverlays {
         }
 
         mapData = newMapData;
+        mapDataList = new ArrayList<>(mapData.values());
     }
 
     /**
@@ -308,7 +335,7 @@ public class GeoPackageMapOverlays {
 
     private void addTileTable(GeoPackage geoPackage, String name, GeoPackageMapData data) {
 
-        GeoPackageTableMapData tableData = new GeoPackageTableMapData(name);
+        GeoPackageTableMapData tableData = new GeoPackageTableMapData(name, false);
         data.addTable(tableData);
 
         // Create a new GeoPackage tile provider and add to the map
@@ -347,7 +374,7 @@ public class GeoPackageMapOverlays {
 
     private void addFeatureTable(GeoPackage geoPackage, String name, GeoPackageMapData data) {
 
-        GeoPackageTableMapData tableData = new GeoPackageTableMapData(name);
+        GeoPackageTableMapData tableData = new GeoPackageTableMapData(name, true);
         data.addTable(tableData);
 
         // Create a new GeoPackage tile provider and add to the map
@@ -449,7 +476,7 @@ public class GeoPackageMapOverlays {
     public String mapClickMessage(LatLng latLng) {
         StringBuilder clickMessage = new StringBuilder();
         if (selectedReport != null) {
-            for (GeoPackageMapData data : mapData.values()) {
+            for (GeoPackageMapData data : mapDataList) {
                 String message = data.mapClickMessage(latLng, mapView, map);
                 if (message != null) {
                     if (clickMessage.length() > 0) {

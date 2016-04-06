@@ -110,6 +110,15 @@
                 android:value="mil.nga.dice.ReportCollectionActivity" />
         </activity>
 
+        <activity
+            android:name=".map.OverlaysActivity"
+            android:label="@string/title_activity_about"
+            android:parentActivityName=".ReportCollectionActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="mil.nga.dice.ReportCollectionActivity" />
+        </activity>
+
         <meta-data
             android:name="com.google.android.maps.v2.API_KEY"
             android:value="AIzaSyAnrfS3ieHI2xaya2Pp4hJt4h2P0xXFE0M" />

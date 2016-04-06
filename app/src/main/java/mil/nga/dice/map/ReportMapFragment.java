@@ -11,6 +11,7 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -31,6 +32,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import mil.nga.dice.R;
+import mil.nga.dice.ReportCollectionActivity;
+import mil.nga.dice.about.AboutActivity;
 import mil.nga.dice.map.geopackage.GeoPackageMapOverlays;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
@@ -39,7 +42,6 @@ import mil.nga.dice.report.ReportManager;
 public class ReportMapFragment extends android.support.v4.app.Fragment implements
         OnMapReadyCallback, OnMapClickListener, OnMarkerClickListener,
         OnMapLongClickListener, OnInfoWindowClickListener {
-
 
 	private static final String TAG = "ReportMap";
 
@@ -50,6 +52,7 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
     private GoogleMap map;
     private OfflineMap offlineMap;
     private GeoPackageMapOverlays geoPackageMapOverlays;
+    private View mapOverlaysView;
 
 
 	public ReportMapFragment() {}
@@ -77,7 +80,18 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
 		mapView = (MapView) view.findViewById(R.id.map);
 		mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
-		
+
+        mapOverlaysView = view.findViewById(R.id.mapOverlays);
+        ImageButton mapOverlaysButton = (ImageButton) mapOverlaysView
+                .findViewById(R.id.mapOverlaysButton);
+        mapOverlaysButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View arg0) {
+                Intent intent = new Intent(getActivity(), OverlaysActivity.class);
+                getActivity().startActivityForResult(intent, ReportCollectionActivity.OVERLAYS_ACTIVITY);
+            }
+        });
+
 		return view;
 	}
 	
@@ -85,6 +99,12 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
 		if (map == null) {
 			return;
 		}
+
+        if(geoPackageMapOverlays.hasGeoPackages()) {
+            mapOverlaysView.setVisibility(View.VISIBLE);
+        }else{
+            mapOverlaysView.setVisibility(View.INVISIBLE);
+        }
 
         if (reportMarkers != null) {
             Iterator<Marker> markers = this.reportMarkers.iterator();
