@@ -137,6 +137,7 @@ public class GeoPackageMapOverlays {
 
     /**
      * Get the map data
+     *
      * @return map data
      */
     public Map<String, GeoPackageMapData> getMapData() {
@@ -145,9 +146,10 @@ public class GeoPackageMapOverlays {
 
     /**
      * Get the map data list
+     *
      * @return map data list
      */
-    public List<GeoPackageMapData> getMapDataList(){
+    public List<GeoPackageMapData> getMapDataList() {
         return mapDataList;
     }
 
@@ -333,6 +335,13 @@ public class GeoPackageMapOverlays {
         }
     }
 
+    /**
+     * Add a tile table to the map
+     *
+     * @param geoPackage
+     * @param name
+     * @param data
+     */
     private void addTileTable(GeoPackage geoPackage, String name, GeoPackageMapData data) {
 
         GeoPackageTableMapData tableData = new GeoPackageTableMapData(name, false);
@@ -372,6 +381,13 @@ public class GeoPackageMapOverlays {
         tableData.setTileOverlay(tileOverlay);
     }
 
+    /**
+     * Add a feature table to the map
+     *
+     * @param geoPackage
+     * @param name
+     * @param data
+     */
     private void addFeatureTable(GeoPackage geoPackage, String name, GeoPackageMapData data) {
 
         GeoPackageTableMapData tableData = new GeoPackageTableMapData(name, true);
@@ -519,7 +535,7 @@ public class GeoPackageMapOverlays {
 
             selectedReport = report;
 
-            //updateSelectedCaches(); TODO
+            updateMap();
         }
     }
 
@@ -554,7 +570,7 @@ public class GeoPackageMapOverlays {
         }
 
         if (change) {
-            //updateSelectedCaches(); TODO
+            updateMap();
         }
     }
 

@@ -100,6 +100,7 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
 			return;
 		}
 
+        // Only show the overlay button if there are GeoPackages
         if(geoPackageMapOverlays.hasGeoPackages()) {
             mapOverlaysView.setVisibility(View.VISIBLE);
         }else{

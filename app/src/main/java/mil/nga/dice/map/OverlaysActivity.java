@@ -1,10 +1,8 @@
 package mil.nga.dice.map;
 
 import android.Manifest;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
@@ -41,18 +39,39 @@ import mil.nga.geopackage.features.index.FeatureIndexManager;
 import mil.nga.geopackage.features.user.FeatureDao;
 import mil.nga.geopackage.tiles.user.TileDao;
 
+/**
+ * View, enabled, disable, and delete map tile and feature overlays
+ */
 public class OverlaysActivity extends AppCompatActivity {
 
+    /**
+     * Permission request read external storage id
+     */
     private static final int PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE = 100;
 
+    /**
+     * Overlays adapter as the expandable list adapter
+     */
     private OverlaysAdapter overlaysAdapter;
 
+    /**
+     * Expandable list view for displaying the GeoPackages and tables
+     */
     private ExpandableListView expandableList;
 
+    /**
+     * Selected GeoPackages for retrieving and updating selected
+     */
     private GeoPackageSelected selectedGeoPackages;
 
+    /**
+     * Flag to track when selection changes were made
+     */
     private boolean changes = false;
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -110,6 +129,9 @@ public class OverlaysActivity extends AppCompatActivity {
         update();
     }
 
+    /**
+     * Update the overlays table by searching for public GeoPackages and their selected state
+     */
     private void update() {
 
         List<GeoPackageMapData> mapDataList = new ArrayList<>();
@@ -164,7 +186,6 @@ public class OverlaysActivity extends AppCompatActivity {
                     minZoom = Math.min(minZoom, DICEConstants.DICE_FEATURES_MAX_ZOOM);
                 }
                 GeoPackageTableMapData tableMapData = new GeoPackageTableMapData(featureTable, true);
-                // TODO maintain children?
                 if (mapData.isEnabled() && (selectedTables.size() == 0 || selectedTables.contains(featureTable))) {
                     tableMapData.setEnabled(true);
                 }
@@ -199,7 +220,6 @@ public class OverlaysActivity extends AppCompatActivity {
 
             // Add stand alone tile tables that were not linked to feature tables
             for (GeoPackageTableMapData tileCacheOverlay : tileMapOverlays.values()) {
-                // TODO maintain children?
                 mapData.addTable(tileCacheOverlay);
             }
 
@@ -212,6 +232,9 @@ public class OverlaysActivity extends AppCompatActivity {
         expandableList.setEnabled(true);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle presses on the action bar items
@@ -224,17 +247,20 @@ public class OverlaysActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void onBackPressed() {
-        Intent intent = new Intent();
-        //intent.putStringArrayListExtra(MapPreferencesActivity.OVERLAY_EXTENDED_DATA_KEY, getSelectedOverlays()); TODO
-        setResult(Activity.RESULT_OK, intent);
-        if(changes || overlaysAdapter.isChanges()) {
+        if (changes || overlaysAdapter.isChanges()) {
             selectedGeoPackages.updateSelected(getSelected());
         }
         finish();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         switch (requestCode) {
@@ -288,6 +314,7 @@ public class OverlaysActivity extends AppCompatActivity {
 
         /**
          * Is there changes
+         *
          * @return true if changes
          */
         public boolean isChanges() {
@@ -303,41 +330,65 @@ public class OverlaysActivity extends AppCompatActivity {
             return overlays;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public int getGroupCount() {
             return overlays.size();
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public int getChildrenCount(int i) {
             return overlays.get(i).getTables().size();
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Object getGroup(int i) {
             return overlays.get(i);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Object getChild(int i, int j) {
             return overlays.get(i).getTables().get(j);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public long getGroupId(int i) {
             return i;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public long getChildId(int i, int j) {
             return j;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public boolean hasStableIds() {
             return false;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public View getGroupView(int i, boolean isExpanded, View view,
                                  ViewGroup viewGroup) {
@@ -359,6 +410,7 @@ public class OverlaysActivity extends AppCompatActivity {
                     boolean checked = ((CheckBox) v).isChecked();
 
                     overlay.setEnabled(checked);
+                    changes = true;
 
                     boolean modified = false;
                     for (GeoPackageTableMapData childCache : overlay.getTables()) {
@@ -369,7 +421,6 @@ public class OverlaysActivity extends AppCompatActivity {
                     }
 
                     if (modified) {
-                        changes = true;
                         notifyDataSetChanged();
                     }
                 }
@@ -392,6 +443,9 @@ public class OverlaysActivity extends AppCompatActivity {
             return view;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public View getChildView(int groupPosition, int childPosition, boolean isLastChild, View convertView, ViewGroup parent) {
 
@@ -416,6 +470,7 @@ public class OverlaysActivity extends AppCompatActivity {
                     boolean checked = ((CheckBox) v).isChecked();
 
                     childCache.setEnabled(checked);
+                    changes = true;
 
                     boolean modified = false;
                     if (checked) {
@@ -437,7 +492,6 @@ public class OverlaysActivity extends AppCompatActivity {
                     }
 
                     if (modified) {
-                        changes = true;
                         notifyDataSetChanged();
                     }
                 }
@@ -457,6 +511,9 @@ public class OverlaysActivity extends AppCompatActivity {
             return convertView;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public boolean isChildSelectable(int i, int j) {
             return true;
@@ -535,7 +592,7 @@ public class OverlaysActivity extends AppCompatActivity {
                         selectedTables.add(tableMapData.getName());
                     }
 
-                    for(GeoPackageTableMapData linkedTable: tableMapData.getLinked()){
+                    for (GeoPackageTableMapData linkedTable : tableMapData.getLinked()) {
                         if (linkedTable.isEnabled()) {
                             selectedTables.add(linkedTable.getName());
                         }

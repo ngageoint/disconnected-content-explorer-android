@@ -152,46 +152,96 @@ public class GeoPackageTableMapData {
         return name;
     }
 
+    /**
+     * Is the GeoPackage table enabled
+     *
+     * @return true if enabled
+     */
     public boolean isEnabled() {
         return enabled;
     }
 
+    /**
+     * Set the table enabled state
+     *
+     * @param enabled true if enabled
+     */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
-        for(GeoPackageTableMapData linkedTable: linked){
+        for (GeoPackageTableMapData linkedTable : linked) {
             linkedTable.setEnabled(enabled);
         }
     }
 
+    /**
+     * Get the table data count
+     *
+     * @return count
+     */
     public int getCount() {
         return count;
     }
 
+    /**
+     * Set the table data count
+     *
+     * @param count count
+     */
     public void setCount(int count) {
         this.count = count;
     }
 
+    /**
+     * Get the min zoom
+     *
+     * @return min zoom
+     */
     public long getMinZoom() {
         return minZoom;
     }
 
+    /**
+     * Set the min zoom
+     *
+     * @param minZoom min zoom
+     */
     public void setMinZoom(long minZoom) {
         this.minZoom = minZoom;
     }
 
+    /**
+     * Get the max zoom
+     *
+     * @return max zoom
+     */
     public long getMaxZoom() {
         return maxZoom;
     }
 
+    /**
+     * Set the max zoom
+     *
+     * @param maxZoom max zoom
+     */
     public void setMaxZoom(long maxZoom) {
         this.maxZoom = maxZoom;
     }
 
+    /**
+     * Get the linked tables
+     *
+     * @return linked tables
+     */
     public List<GeoPackageTableMapData> getLinked() {
         return linked;
     }
 
-    public void addLinked(GeoPackageTableMapData link){
+    /**
+     * Add a linked table
+     *
+     * @param link linked table
+     */
+    public void addLinked(GeoPackageTableMapData link) {
         linked.add(link);
     }
 
@@ -328,6 +378,11 @@ public class GeoPackageTableMapData {
         return tableData;
     }
 
+    /**
+     * Get the table icon image resource id
+     *
+     * @return image resource id
+     */
     public Integer getIconImageResourceId() {
         Integer icon = null;
         if (featureTable) {
@@ -338,6 +393,11 @@ public class GeoPackageTableMapData {
         return icon;
     }
 
+    /**
+     * Get the table information
+     *
+     * @return table info
+     */
     public String getInfo() {
         String info = null;
         if (featureTable) {
@@ -347,7 +407,7 @@ public class GeoPackageTableMapData {
         }
         long min = minZoom;
         long max = maxZoom;
-        for(GeoPackageTableMapData linkedTable: linked){
+        for (GeoPackageTableMapData linkedTable : linked) {
             min = Math.min(min, linkedTable.getMinZoom());
             max = Math.max(max, linkedTable.getMaxZoom());
         }

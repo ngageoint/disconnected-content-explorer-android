@@ -61,18 +61,38 @@ public class GeoPackageMapData {
         return name;
     }
 
+    /**
+     * Is the GeoPackage enabled
+     *
+     * @return true if enabled
+     */
     public boolean isEnabled() {
         return enabled;
     }
 
+    /**
+     * Set the GeoPackage as enabled or disabled
+     *
+     * @param enabled true to enable
+     */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
 
+    /**
+     * Is the GeoPackage a locked file that should not be deleted?
+     *
+     * @return true if locked
+     */
     public boolean isLocked() {
         return locked;
     }
 
+    /**
+     * Set if the GeoPackage is locked
+     *
+     * @param locked true if locked
+     */
     public void setLocked(boolean locked) {
         this.locked = locked;
     }
@@ -205,6 +225,11 @@ public class GeoPackageMapData {
         return clickData.isEmpty() ? null : clickData;
     }
 
+    /**
+     * Get the icon image resource id for a GeoPackage
+     *
+     * @return image resource id
+     */
     public Integer getIconImageResourceId() {
         return R.drawable.ic_geopackage;
     }
