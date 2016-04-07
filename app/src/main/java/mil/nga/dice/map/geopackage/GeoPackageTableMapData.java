@@ -280,6 +280,21 @@ public class GeoPackageTableMapData {
             shape.remove();
         }
         mapShapes.clear();
+        close();
+    }
+
+    /**
+     * Close the table map data connection
+     */
+    public void close() {
+        if (featureOverlayQueries != null) {
+            for (FeatureOverlayQuery featureOverlayQuery : featureOverlayQueries) {
+                featureOverlayQuery.close();
+            }
+            for (GeoPackageTableMapData linkedMapData : linked) {
+                linkedMapData.close();
+            }
+        }
     }
 
     /**

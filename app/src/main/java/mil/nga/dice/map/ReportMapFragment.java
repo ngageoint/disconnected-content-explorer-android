@@ -1,6 +1,7 @@
 package mil.nga.dice.map;
 
 //import android.app.Fragment;
+import android.app.AlertDialog;
 import android.support.v4.app.Fragment;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -176,20 +177,35 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
     }
 
 	@Override
-	public void onMapLongClick(LatLng arg0) {
+	public void onMapLongClick(LatLng latLng) {
 		// TODO Auto-generated method stub
 	}
 
 	@Override
-	public boolean onMarkerClick(Marker arg0) {
+	public boolean onMarkerClick(Marker latLng) {
 		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
-	public void onMapClick(LatLng arg0) {
-		// TODO Auto-generated method stub
+	public void onMapClick(LatLng latLng) {
+
+        String message = geoPackageMapOverlays.mapClickMessage(latLng);
+        displayMessage(message);
 	}
+
+    /**
+     * Display a message
+     * @param message message string
+     */
+    private void displayMessage(String message){
+        if(message != null && !message.isEmpty()){
+            new AlertDialog.Builder(getActivity())
+                    .setMessage(message)
+                    .setPositiveButton(android.R.string.yes, null)
+                    .show();
+        }
+    }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {

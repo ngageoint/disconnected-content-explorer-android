@@ -411,7 +411,7 @@ public class GeoPackageMapOverlays {
             // Adjust the max features number tile draw paint attributes here as needed to
             // change how tiles are drawn when more than the max features exist in a tile
             featureTiles.setMaxFeaturesTileDraw(numberFeaturesTile);
-            featureTiles.setIndexManager(new FeatureIndexManager(context, geoPackage, featureDao));
+            featureTiles.setIndexManager(indexer);
             // Adjust the feature tiles draw paint attributes here as needed to change how
             // features are drawn on tiles
             FeatureOverlay featureOverlay = new FeatureOverlay(featureTiles);
@@ -428,6 +428,7 @@ public class GeoPackageMapOverlays {
             TileOverlay tileOverlay = map.addTileOverlay(overlayOptions);
             tableData.setTileOverlay(tileOverlay);
         } else {
+            indexer.close();
             int maxFeaturesPerTable = 0;
             if (featureDao.getGeometryType() == GeometryType.POINT) {
                 maxFeaturesPerTable = DICEConstants.DICE_CACHE_FEATURES_MAX_POINTS_PER_TABLE;
@@ -491,7 +492,7 @@ public class GeoPackageMapOverlays {
      */
     public String mapClickMessage(LatLng latLng) {
         StringBuilder clickMessage = new StringBuilder();
-        if (selectedReport != null) {
+        if (selectedReport == null) {
             for (GeoPackageMapData data : mapDataList) {
                 String message = data.mapClickMessage(latLng, mapView, map);
                 if (message != null) {

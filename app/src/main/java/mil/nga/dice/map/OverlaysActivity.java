@@ -179,6 +179,7 @@ public class OverlaysActivity extends AppCompatActivity {
                 FeatureDao featureDao = geoPackage.getFeatureDao(featureTable);
                 FeatureIndexManager indexer = new FeatureIndexManager(this, geoPackage, featureDao);
                 boolean indexed = indexer.isIndexed();
+                indexer.close();
                 long minZoom = 0;
                 if (indexed) {
                     minZoom = featureDao.getZoomLevel() + DICEConstants.DICE_FEATURE_TILES_MIN_ZOOM_OFFSET;
