@@ -128,10 +128,12 @@ public class GeoPackageMapData {
 
     /**
      * Remove the GeoPackage from the map
+     *
+     * @param markerIds
      */
-    public void removeFromMap() {
+    public void removeFromMap(Map<String, ?> markerIds) {
         for (GeoPackageTableMapData table : tableDataList) {
-            table.removeFromMap();
+            table.removeFromMap(markerIds);
         }
     }
 

@@ -6,7 +6,10 @@ import android.widget.Toast;
 
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.TileOverlay;
 import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.google.android.gms.maps.model.TileProvider;
@@ -36,6 +39,7 @@ import mil.nga.geopackage.features.user.FeatureRow;
 import mil.nga.geopackage.geom.GeoPackageGeometryData;
 import mil.nga.geopackage.geom.map.GoogleMapShape;
 import mil.nga.geopackage.geom.map.GoogleMapShapeConverter;
+import mil.nga.geopackage.geom.map.GoogleMapShapeType;
 import mil.nga.geopackage.projection.Projection;
 import mil.nga.geopackage.tiles.features.FeatureTiles;
 import mil.nga.geopackage.tiles.features.MapFeatureTiles;
@@ -47,6 +51,7 @@ import mil.nga.geopackage.tiles.overlay.GeoPackageOverlayFactory;
 import mil.nga.geopackage.tiles.user.TileDao;
 import mil.nga.wkb.geom.Geometry;
 import mil.nga.wkb.geom.GeometryType;
+import mil.nga.wkb.util.GeometryPrinter;
 
 /**
  * Manages GeoPackage feature and tile overlays, including adding to and removing from the map
@@ -102,6 +107,20 @@ public class GeoPackageMapOverlays {
      * Selected GeoPackage settings
      */
     private GeoPackageSelected selectedSettings;
+
+    /**
+     * Marker feature
+     */
+    class MarkerFeature {
+        long featureId;
+        String database;
+        String tableName;
+    }
+
+    /**
+     * Mapping between marker ids and the features
+     */
+    private Map<String, MarkerFeature> markerIds = new HashMap<String, MarkerFeature>();
 
     /**
      * Constructor
@@ -252,7 +271,7 @@ public class GeoPackageMapOverlays {
                             selectedSettings.updateSelected(updateSelectedCaches);
 
                             if (existingGeoPackageData != null) {
-                                existingGeoPackageData.removeFromMap();
+                                existingGeoPackageData.removeFromMap(markerIds);
                                 existingGeoPackageData = null;
                             }
                         }
@@ -284,7 +303,7 @@ public class GeoPackageMapOverlays {
 
             GeoPackageMapData newGeoPackageMapData = newMapData.get(oldGeoPackageMapData.getName());
             if (newGeoPackageMapData == null) {
-                oldGeoPackageMapData.removeFromMap();
+                oldGeoPackageMapData.removeFromMap(markerIds);
                 cache.close(oldGeoPackageMapData.getName());
             } else {
 
@@ -293,7 +312,7 @@ public class GeoPackageMapOverlays {
                     GeoPackageTableMapData newGeoPackageTableMapData = newGeoPackageMapData.getTable(oldGeoPackageTableMapData.getName());
 
                     if (newGeoPackageTableMapData == null) {
-                        oldGeoPackageTableMapData.removeFromMap();
+                        oldGeoPackageTableMapData.removeFromMap(markerIds);
                     }
                 }
             }
@@ -449,9 +468,25 @@ public class GeoPackageMapOverlays {
                         if (geometry != null) {
                             GoogleMapShape shape = shapeConverter.toShape(geometry);
 
-                            // TODO Set title on the point?
+                            if(shape.getShapeType() == GoogleMapShapeType.LAT_LNG){
+                                LatLng latLng = (LatLng) shape.getShape();
+                                MarkerOptions markerOptions = new MarkerOptions();
+                                markerOptions.position(latLng);
+                                markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
+                                shape = new GoogleMapShape(GeometryType.POINT, GoogleMapShapeType.MARKER_OPTIONS, markerOptions);
+                            }
 
                             GoogleMapShape mapShape = GoogleMapShapeConverter.addShapeToMap(map, shape);
+
+                            if (mapShape.getShapeType() == GoogleMapShapeType.MARKER) {
+                                Marker marker = (Marker) mapShape.getShape();
+                                MarkerFeature markerFeature = new MarkerFeature();
+                                markerFeature.database = geoPackage.getName();
+                                markerFeature.tableName = name;
+                                markerFeature.featureId = featureRow.getId();
+                                markerIds.put(marker.getId(), markerFeature);
+                            }
+
                             tableData.addMapShape(mapShape);
 
                             if (++count >= maxFeaturesPerTable) {
@@ -505,6 +540,55 @@ public class GeoPackageMapOverlays {
         }
 
         return clickMessage.length() > 0 ? clickMessage.toString() : null;
+    }
+
+    /**
+     * Build a map click location message from the clicked marker
+     *
+     * @param marker clicked marker
+     * @return click message
+     */
+    public String mapClickMessage(Marker marker) {
+        String message = null;
+        MarkerFeature markerFeature = markerIds.get(marker.getId());
+        if (markerFeature != null) {
+            final GeoPackage geoPackage = manager.open(markerFeature.database);
+            try {
+                final FeatureDao featureDao = geoPackage
+                        .getFeatureDao(markerFeature.tableName);
+
+                final FeatureRow featureRow = featureDao.queryForIdRow(markerFeature.featureId);
+
+                if (featureRow != null) {
+                    GeoPackageGeometryData geomData = featureRow.getGeometry();
+                    if (geomData != null && !geomData.isEmpty()) {
+                        Geometry geometry = geomData.getGeometry();
+                        if (geometry != null) {
+                            StringBuilder messageBuilder = new StringBuilder();
+                            messageBuilder.append(markerFeature.database).append(" - ").append(markerFeature.tableName).append("\n");
+                            int geometryColumn = featureRow.getGeometryColumnIndex();
+                            for (int i = 0; i < featureRow.columnCount(); i++) {
+                                if (i != geometryColumn) {
+                                    Object value = featureRow.getValue(i);
+                                    if (value != null) {
+                                        messageBuilder.append("\n").append(featureRow.getColumnName(i)).append(": ").append(value);
+                                    }
+                                }
+                            }
+
+                            if (messageBuilder.length() > 0) {
+                                messageBuilder.append("\n\n");
+                            }
+                            messageBuilder.append(GeometryPrinter.getGeometryString(geometry));
+                            message = messageBuilder.toString();
+                        }
+                    }
+                }
+            } finally {
+                geoPackage.close();
+            }
+        }
+        return message;
     }
 
     /**

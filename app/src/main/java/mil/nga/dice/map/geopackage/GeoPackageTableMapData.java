@@ -3,14 +3,17 @@ package mil.nga.dice.map.geopackage;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.TileOverlay;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import mil.nga.dice.R;
 import mil.nga.geopackage.BoundingBox;
 import mil.nga.geopackage.geom.map.GoogleMapShape;
+import mil.nga.geopackage.geom.map.GoogleMapShapeType;
 import mil.nga.geopackage.projection.Projection;
 import mil.nga.geopackage.projection.ProjectionConstants;
 import mil.nga.geopackage.projection.ProjectionFactory;
@@ -132,15 +135,6 @@ public class GeoPackageTableMapData {
      */
     public List<GoogleMapShape> getMapShapes() {
         return mapShapes;
-    }
-
-    /**
-     * Set the map shapes
-     *
-     * @param mapShapes map shapes
-     */
-    public void setMapShapes(List<GoogleMapShape> mapShapes) {
-        this.mapShapes = mapShapes;
     }
 
     /**
@@ -268,8 +262,10 @@ public class GeoPackageTableMapData {
 
     /**
      * Remove the GeoPackage table from the map
+     *
+     * @param markerIds
      */
-    public void removeFromMap() {
+    public void removeFromMap(Map<String, ?> markerIds) {
 
         if (tileOverlay != null) {
             tileOverlay.remove();
@@ -277,6 +273,10 @@ public class GeoPackageTableMapData {
         }
 
         for (GoogleMapShape shape : mapShapes) {
+            if(shape.getShapeType() == GoogleMapShapeType.MARKER){
+                Marker marker = (Marker) shape.getShape();
+                markerIds.remove(marker.getId());
+            }
             shape.remove();
         }
         mapShapes.clear();

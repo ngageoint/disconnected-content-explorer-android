@@ -182,14 +182,18 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
 	}
 
 	@Override
-	public boolean onMarkerClick(Marker latLng) {
-		// TODO Auto-generated method stub
-		return false;
+	public boolean onMarkerClick(Marker marker) {
+        boolean consumed = false;
+        String message = geoPackageMapOverlays.mapClickMessage(marker);
+        if(message != null && !message.isEmpty()) {
+            consumed = true;
+            displayMessage(message);
+        }
+        return consumed;
 	}
 
 	@Override
 	public void onMapClick(LatLng latLng) {
-
         String message = geoPackageMapOverlays.mapClickMessage(latLng);
         displayMessage(message);
 	}
