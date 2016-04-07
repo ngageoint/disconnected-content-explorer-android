@@ -468,7 +468,7 @@ public class GeoPackageMapOverlays {
                         if (geometry != null) {
                             GoogleMapShape shape = shapeConverter.toShape(geometry);
 
-                            if(shape.getShapeType() == GoogleMapShapeType.LAT_LNG){
+                            if (shape.getShapeType() == GoogleMapShapeType.LAT_LNG) {
                                 LatLng latLng = (LatLng) shape.getShape();
                                 MarkerOptions markerOptions = new MarkerOptions();
                                 markerOptions.position(latLng);
@@ -550,42 +550,44 @@ public class GeoPackageMapOverlays {
      */
     public String mapClickMessage(Marker marker) {
         String message = null;
-        MarkerFeature markerFeature = markerIds.get(marker.getId());
-        if (markerFeature != null) {
-            final GeoPackage geoPackage = manager.open(markerFeature.database);
-            try {
-                final FeatureDao featureDao = geoPackage
-                        .getFeatureDao(markerFeature.tableName);
+        if (selectedReport == null) {
+            MarkerFeature markerFeature = markerIds.get(marker.getId());
+            if (markerFeature != null) {
+                final GeoPackage geoPackage = manager.open(markerFeature.database);
+                try {
+                    final FeatureDao featureDao = geoPackage
+                            .getFeatureDao(markerFeature.tableName);
 
-                final FeatureRow featureRow = featureDao.queryForIdRow(markerFeature.featureId);
+                    final FeatureRow featureRow = featureDao.queryForIdRow(markerFeature.featureId);
 
-                if (featureRow != null) {
-                    GeoPackageGeometryData geomData = featureRow.getGeometry();
-                    if (geomData != null && !geomData.isEmpty()) {
-                        Geometry geometry = geomData.getGeometry();
-                        if (geometry != null) {
-                            StringBuilder messageBuilder = new StringBuilder();
-                            messageBuilder.append(markerFeature.database).append(" - ").append(markerFeature.tableName).append("\n");
-                            int geometryColumn = featureRow.getGeometryColumnIndex();
-                            for (int i = 0; i < featureRow.columnCount(); i++) {
-                                if (i != geometryColumn) {
-                                    Object value = featureRow.getValue(i);
-                                    if (value != null) {
-                                        messageBuilder.append("\n").append(featureRow.getColumnName(i)).append(": ").append(value);
+                    if (featureRow != null) {
+                        GeoPackageGeometryData geomData = featureRow.getGeometry();
+                        if (geomData != null && !geomData.isEmpty()) {
+                            Geometry geometry = geomData.getGeometry();
+                            if (geometry != null) {
+                                StringBuilder messageBuilder = new StringBuilder();
+                                messageBuilder.append(markerFeature.database).append(" - ").append(markerFeature.tableName).append("\n");
+                                int geometryColumn = featureRow.getGeometryColumnIndex();
+                                for (int i = 0; i < featureRow.columnCount(); i++) {
+                                    if (i != geometryColumn) {
+                                        Object value = featureRow.getValue(i);
+                                        if (value != null) {
+                                            messageBuilder.append("\n").append(featureRow.getColumnName(i)).append(": ").append(value);
+                                        }
                                     }
                                 }
-                            }
 
-                            if (messageBuilder.length() > 0) {
-                                messageBuilder.append("\n\n");
+                                if (messageBuilder.length() > 0) {
+                                    messageBuilder.append("\n\n");
+                                }
+                                messageBuilder.append(GeometryPrinter.getGeometryString(geometry));
+                                message = messageBuilder.toString();
                             }
-                            messageBuilder.append(GeometryPrinter.getGeometryString(geometry));
-                            message = messageBuilder.toString();
                         }
                     }
+                } finally {
+                    geoPackage.close();
                 }
-            } finally {
-                geoPackage.close();
             }
         }
         return message;
@@ -598,64 +600,73 @@ public class GeoPackageMapOverlays {
      */
     public void selectedReport(Report report) {
 
-        if (!report.getCacheFiles().isEmpty()) {
+        Report existingReport = selectedReport;
 
-            for (ReportCache reportCache : report.getCacheFiles()) {
+        if (existingReport == null || existingReport != report) {
 
-                boolean exists = false;
-                try {
-                    exists = manager.exists(reportCache.getName());
-                } catch (Exception e) {
-                    Log.e(GeoPackageMapOverlays.class.getSimpleName(), "Failed to check if GeoPackage exists" + reportCache.getName(), e);
-                }
-
-                if (!exists) {
-                    try {
-                        manager.importGeoPackageAsExternalLink(reportCache.getPath(), reportCache.getName(), true);
-                    } catch (Exception e) {
-                        Log.e(GeoPackageMapOverlays.class.getSimpleName(), "Failed to import GeoPackage " + reportCache.getName() + " at path: " + reportCache.getPath(), e);
-                    }
-                }
+            if (existingReport != null) {
+                deselectedReport();
             }
 
-            selectedReport = report;
+            if (!report.getCacheFiles().isEmpty()) {
 
-            updateMap();
+                for (ReportCache reportCache : report.getCacheFiles()) {
+
+                    boolean exists = false;
+                    try {
+                        exists = manager.exists(reportCache.getName());
+                    } catch (Exception e) {
+                        Log.e(GeoPackageMapOverlays.class.getSimpleName(), "Failed to check if GeoPackage exists" + reportCache.getName(), e);
+                    }
+
+                    if (!exists) {
+                        try {
+                            manager.importGeoPackageAsExternalLink(reportCache.getPath(), reportCache.getName(), true);
+                        } catch (Exception e) {
+                            Log.e(GeoPackageMapOverlays.class.getSimpleName(), "Failed to import GeoPackage " + reportCache.getName() + " at path: " + reportCache.getPath(), e);
+                        }
+                    }
+                }
+
+                selectedReport = report;
+
+                updateMap();
+            }
         }
     }
 
     /**
      * Report has been deselected on the map
-     *
-     * @param report deselected report
      */
-    public void deselectedReport(Report report) {
+    public void deselectedReport() {
 
         boolean change = false;
 
-        selectedReport = null;
+        if (selectedReport != null) {
+            selectedReport = null;
 
-        String like = DICEConstants.DICE_TEMP_CACHE_SUFFIX + "%";
-        List<String> geoPackages = null;
-        try {
-            geoPackages = manager.databasesLike(like);
-        } catch (Exception e) {
-            Log.e(GeoPackageMapOverlays.class.getSimpleName(), "Failed to find temporary GeoPackages", e);
-        }
-        if (geoPackages != null) {
-            for (String geoPackage : geoPackages) {
-                cache.close(geoPackage);
-                try {
-                    manager.delete(geoPackage);
-                } catch (Exception e) {
-                    Log.e(GeoPackageMapOverlays.class.getSimpleName(), "Failed to delete GeoPackage: " + geoPackage, e);
-                }
-                change = true;
+            String like = DICEConstants.DICE_TEMP_CACHE_SUFFIX + "%";
+            List<String> geoPackages = null;
+            try {
+                geoPackages = manager.databasesLike(like);
+            } catch (Exception e) {
+                Log.e(GeoPackageMapOverlays.class.getSimpleName(), "Failed to find temporary GeoPackages", e);
             }
-        }
+            if (geoPackages != null) {
+                for (String geoPackage : geoPackages) {
+                    cache.close(geoPackage);
+                    try {
+                        manager.delete(geoPackage);
+                    } catch (Exception e) {
+                        Log.e(GeoPackageMapOverlays.class.getSimpleName(), "Failed to delete GeoPackage: " + geoPackage, e);
+                    }
+                    change = true;
+                }
+            }
 
-        if (change) {
-            updateMap();
+            if (change) {
+                updateMap();
+            }
         }
     }
 

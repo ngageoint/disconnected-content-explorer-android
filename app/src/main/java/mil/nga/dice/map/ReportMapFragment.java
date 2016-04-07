@@ -1,8 +1,8 @@
 package mil.nga.dice.map;
 
 //import android.app.Fragment;
+
 import android.app.AlertDialog;
-import android.support.v4.app.Fragment;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -34,7 +34,6 @@ import java.util.List;
 
 import mil.nga.dice.R;
 import mil.nga.dice.ReportCollectionActivity;
-import mil.nga.dice.about.AboutActivity;
 import mil.nga.dice.map.geopackage.GeoPackageMapOverlays;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
@@ -67,11 +66,11 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
 
 		LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getActivity().getApplicationContext());
 		bm.registerReceiver(new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				refreshMapMarkers();
-			}
-		}, new IntentFilter(ReportManager.INTENT_UPDATE_REPORT_LIST));
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                refreshMapMarkers();
+            }
+        }, new IntentFilter(ReportManager.INTENT_UPDATE_REPORT_LIST));
 	}
 
 	@Override
@@ -162,23 +161,38 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
 
     @Override
     public void onInfoWindowClick(Marker marker) {
+        Report report = getReport(marker);
+        if(report != null) {
+            geoPackageMapOverlays.deselectedReport();
+            Intent detailIntent = new Intent(getActivity(), ReportDetailActivity.class);
+            detailIntent.putExtra("report", report);
+            startActivity(detailIntent);
+        }
+    }
+
+    /**
+     * Get the Report from the marker
+     * @param marker
+     * @return report
+     */
+    private Report getReport(Marker marker){
         String title = marker.getTitle();
-        Report targetReport = null, currentReport;
+        Report report = null;
         Iterator<Report> cursor = reports.iterator();
-        while (cursor.hasNext() && targetReport == null) {
+        Report currentReport = null;
+        while (cursor.hasNext()) {
             currentReport = cursor.next();
             if (currentReport.getTitle().equalsIgnoreCase(title)) {
-                targetReport = currentReport;
+                report = currentReport;
+                break;
             }
         }
-        Intent detailIntent = new Intent(getActivity(), ReportDetailActivity.class);
-        detailIntent.putExtra("report", targetReport);
-        startActivity(detailIntent);
+        return report;
     }
 
 	@Override
 	public void onMapLongClick(LatLng latLng) {
-		// TODO Auto-generated method stub
+
 	}
 
 	@Override
@@ -187,16 +201,26 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
         String message = geoPackageMapOverlays.mapClickMessage(marker);
         if(message != null && !message.isEmpty()) {
             consumed = true;
+            geoPackageMapOverlays.deselectedReport();
             displayMessage(message);
+        }else{
+            Report report = getReport(marker);
+            if(report != null) {
+                geoPackageMapOverlays.selectedReport(report);
+            }else{
+                geoPackageMapOverlays.deselectedReport();
+            }
         }
+
         return consumed;
 	}
 
 	@Override
 	public void onMapClick(LatLng latLng) {
+        geoPackageMapOverlays.deselectedReport();
         String message = geoPackageMapOverlays.mapClickMessage(latLng);
         displayMessage(message);
-	}
+    }
 
     /**
      * Display a message
