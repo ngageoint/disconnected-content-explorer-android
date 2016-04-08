@@ -5,6 +5,8 @@ package mil.nga.dice;
  */
 public class DICEConstants {
 
+    public static final String DICE_REPORT_DIRECTORY = "DICE";
+    public static final String DICE_REPORT_SHARED_DIRECTORY = "shared";
     public static final String DICE_SELECTED_CACHES = "selectedCaches";
     public static final String DICE_TEMP_CACHE_SUFFIX = "rp-";
     public static final int DICE_CACHE_FEATURE_TILES_MAX_POINTS_PER_TILE = 1000;

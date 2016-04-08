@@ -39,7 +39,11 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import mil.nga.dice.DICEConstants;
 import mil.nga.dice.R;
+import mil.nga.geopackage.GeoPackageConstants;
+import mil.nga.geopackage.GeoPackageManager;
+import mil.nga.geopackage.factory.GeoPackageFactory;
 
 /**
  * TODO: modify to look for content roots in report dir instead of tying to source file
@@ -141,7 +145,7 @@ public class ReportManager implements ReportImportCallbacks {
 
         handler = new Handler(Looper.getMainLooper());
 
-        reportsDir = new File(Environment.getExternalStorageDirectory(), "DICE");
+        reportsDir = new File(Environment.getExternalStorageDirectory(), DICEConstants.DICE_REPORT_DIRECTORY);
         if (!reportsDir.exists()) {
             reportsDir.mkdirs();
         }
@@ -255,6 +259,7 @@ public class ReportManager implements ReportImportCallbacks {
     @Override
     public void importComplete(Report report) {
         ReportDescriptorUtil.readDescriptorAndUpdateReport(report);
+        loadCacheFiles(report);
         deleteSourceFileIfInDropbox(report);
         removeDuplicatesOf(report);
         report.setEnabled(true);
@@ -334,6 +339,7 @@ public class ReportManager implements ReportImportCallbacks {
                 else if (reportPath.isDirectory()) {
                     report.setPath(reportPath);
                     ReportDescriptorUtil.readDescriptorAndUpdateReport(report);
+                    loadCacheFiles(report);
                     report.setEnabled(true);
                 }
                 else {
@@ -716,6 +722,85 @@ public class ReportManager implements ReportImportCallbacks {
             return true;
         }
 
+    }
+
+    private void loadCacheFiles(Report report){
+
+        List<File> files = new ArrayList<>();
+        File path = report.getPath();
+        getCacheFiles(path, files);
+
+        for(File file: files){
+
+            String fileString = file.getAbsolutePath();
+            String fileSubPath = fileString.replaceFirst(path.getAbsolutePath(), "");
+            if(fileSubPath.startsWith(File.separator)){
+                fileSubPath = fileSubPath.substring(1);
+            }
+            boolean shared = fileSubPath.startsWith(DICEConstants.DICE_REPORT_SHARED_DIRECTORY + File.separator);
+
+            String nameWithExtension = file.getName();
+            String name = removeExtension(nameWithExtension);
+
+            String reportName = removeExtension(report.getId());
+            name = reportIdPrefix(name, reportName, shared);
+            if(shared){
+                GeoPackageManager manager = GeoPackageFactory.getManager(context);
+                if(!manager.exists(name)) {
+                    manager.importGeoPackageAsExternalLink(file, name);
+                }
+            }
+
+            ReportCache reportCache = new ReportCache(name, fileString, shared);
+            report.addReportCache(reportCache);
+        }
+    }
+
+    private String removeExtension(String name){
+        String nameWithoutExtension = name;
+        int i = name.lastIndexOf('.');
+        if (i > 0) {
+            nameWithoutExtension = name.substring(0, i);
+        }
+        return nameWithoutExtension;
+    }
+
+    private void getCacheFiles(File path, List<File> files){
+
+        if(path.isDirectory()) {
+            for (File file : path.listFiles()) {
+                getCacheFiles(file, files);
+            }
+        }else{
+            String stringPath = path.getAbsolutePath();
+            if(stringPath.endsWith("." + GeoPackageConstants.GEOPACKAGE_EXTENSION)
+                    || stringPath.endsWith("." + GeoPackageConstants.GEOPACKAGE_EXTENDED_EXTENSION)){
+                files.add(path);
+            }
+        }
+    }
+
+    // TODO move?
+    public static String reportIdPrefix(String report){
+        String reportIdPrefix = report;
+        if(reportIdPrefix != null){
+            reportIdPrefix = DICEConstants.DICE_TEMP_CACHE_SUFFIX + reportIdPrefix + "-";
+        }
+        return reportIdPrefix;
+    }
+
+    // TODO move?
+    public static String reportIdPrefix(String name, String report, boolean share){
+        String reportId = name;
+        if(!share){
+            String reportIdPrefix = reportIdPrefix(report);
+            if(reportIdPrefix != null){
+                reportId = reportIdPrefix + reportId;
+            }else{
+                reportId = null;
+            }
+        }
+        return reportId;
     }
 
 }

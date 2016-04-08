@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -19,6 +20,7 @@ import android.widget.ExpandableListView;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -139,6 +141,7 @@ public class OverlaysActivity extends AppCompatActivity {
         Map<String, Set<String>> selectedCaches = selectedGeoPackages.getSelectedMap();
 
         GeoPackageManager manager = GeoPackageFactory.getManager(this);
+        File reportsDir = new File(Environment.getExternalStorageDirectory(), DICEConstants.DICE_REPORT_DIRECTORY);
 
         String like = DICEConstants.DICE_TEMP_CACHE_SUFFIX + "%";
         List<String> geoPackages = manager.databasesNotLike(like);
@@ -150,8 +153,9 @@ public class OverlaysActivity extends AppCompatActivity {
             }
             mapDataList.add(mapData);
 
-            // TODO Determine if this is a locked GeoPackage
-            mapData.setLocked(false);
+            String filePath = manager.getPath(name);
+            boolean locked = filePath.startsWith(reportsDir.getAbsolutePath());
+            mapData.setLocked(locked);
 
             GeoPackage geoPackage = manager.open(name);
 
