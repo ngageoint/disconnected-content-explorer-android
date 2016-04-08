@@ -165,7 +165,7 @@ public class OverlaysActivity extends AppCompatActivity {
             for (String tileTable : tileTables) {
                 TileDao tileDao = geoPackage.getTileDao(tileTable);
                 GeoPackageTableMapData tableMapData = new GeoPackageTableMapData(tileTable, false);
-                if (tableMapData.isEnabled() && (selectedTables.size() == 0 || selectedTables.contains(tileTable))) {
+                if (mapData.isEnabled() && (selectedTables.size() == 0 || selectedTables.contains(tileTable))) {
                     tableMapData.setEnabled(true);
                 }
                 tableMapData.setCount(tileDao.count());
