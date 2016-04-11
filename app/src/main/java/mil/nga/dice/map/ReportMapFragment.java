@@ -7,8 +7,12 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -25,6 +29,7 @@ import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
@@ -32,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import mil.nga.dice.DICEConstants;
 import mil.nga.dice.R;
 import mil.nga.dice.ReportCollectionActivity;
 import mil.nga.dice.map.geopackage.GeoPackageMapOverlays;
@@ -53,7 +59,7 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
     private OfflineMap offlineMap;
     private GeoPackageMapOverlays geoPackageMapOverlays;
     private View mapOverlaysView;
-
+    private SharedPreferences settings;
 
 	public ReportMapFragment() {}
 
@@ -71,6 +77,12 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
                 refreshMapMarkers();
             }
         }, new IntentFilter(ReportManager.INTENT_UPDATE_REPORT_LIST));
+
+        settings = PreferenceManager
+                .getDefaultSharedPreferences(getActivity());
+        Editor editor = settings.edit();
+        editor.putBoolean(DICEConstants.DICE_ZOOM_TO_REPORTS, true);
+        editor.commit();
 	}
 
 	@Override
@@ -116,7 +128,16 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
             }
         }
 
+        boolean zoom = settings.getBoolean(DICEConstants.DICE_ZOOM_TO_REPORTS, true);
+        if(zoom){
+            Editor editor = settings.edit();
+            editor.putBoolean(DICEConstants.DICE_ZOOM_TO_REPORTS, false);
+            editor.commit();
+        }
+
         reportMarkers = new ArrayList<>(reports.size());
+
+        LatLngBounds.Builder zoomBounds = null;
 
 		for (Report report : reports) {
 			if (report.getLat() != null && report.getLon() != null) {
@@ -125,8 +146,29 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
                         .title(report.getTitle())
                         .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
 				reportMarkers.add(map.addMarker(marker));
+
+                if(zoom){
+                    if(zoomBounds == null){
+                        zoomBounds = new LatLngBounds.Builder();
+                    }
+                    zoomBounds.include(marker.getPosition());
+                }
 			}
 		}
+
+        // Zoom to the reports
+        if(zoomBounds != null){
+            View view = getView();
+            int minViewLength = Math.min(view.getWidth(), view.getHeight());
+            final int padding = (int) Math.floor(minViewLength * 0.1);
+            try {
+                map.animateCamera(CameraUpdateFactory.newLatLngBounds(
+                        zoomBounds.build(), padding));
+            } catch (Exception e) {
+                Log.w(ReportMapFragment.class.getSimpleName(),
+                        "Unable to move camera", e);
+            }
+        }
 
         geoPackageMapOverlays.updateMap();
 	}
@@ -146,7 +188,7 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
 
 	@Override
 	public void onLowMemory() {
-		super.onLowMemory();
+        super.onLowMemory();
 		mapView.onLowMemory();
         // TODO: clear the offline map and add logic to restore it later
 	}
