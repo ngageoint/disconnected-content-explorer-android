@@ -255,8 +255,10 @@ public class GeoPackageMapOverlays {
                     Set<String> selected = updateSelectedCaches.get(name);
 
                     // Close a previously open GeoPackage connection if a new GeoPackge version
+                    boolean removeExistingFromMap = false;
                     if (selected.isEmpty()) {
                         cache.close(name);
+                        removeExistingFromMap = true;
                     }
 
                     GeoPackage geoPackage = cache.getOrOpen(name);
@@ -269,12 +271,13 @@ public class GeoPackageMapOverlays {
                         if (!selectedGeoPackages.contains(name)) {
                             updateSelectedCaches.put(name, selected);
                             selectedSettings.updateSelected(updateSelectedCaches);
-
-                            if (existingGeoPackageData != null) {
-                                existingGeoPackageData.removeFromMap(markerIds);
-                                existingGeoPackageData = null;
-                            }
+                            removeExistingFromMap = true;
                         }
+                    }
+
+                    if(removeExistingFromMap && existingGeoPackageData != null){
+                        existingGeoPackageData.removeFromMap(markerIds);
+                        existingGeoPackageData = null;
                     }
 
                     GeoPackageMapData geoPackageData = new GeoPackageMapData(name);

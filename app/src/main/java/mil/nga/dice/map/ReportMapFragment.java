@@ -135,12 +135,11 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
 	public void onResume() {
 		super.onResume();
 		mapView.onResume();
-
-		refreshMapMarkers();
 	}
 
 	@Override
 	public void onPause () {
+        geoPackageMapOverlays.deselectedReport();
 		super.onPause();
 		mapView.onPause();
 	}
@@ -175,7 +174,7 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
      * @param marker
      * @return report
      */
-    private Report getReport(Marker marker){
+    private Report getReport(Marker marker) {
         String title = marker.getTitle();
         Report report = null;
         Iterator<Report> cursor = reports.iterator();
