@@ -8,7 +8,6 @@ import android.graphics.ColorMatrixColorFilter;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
@@ -18,19 +17,15 @@ import android.util.Log;
 
 import java.io.File;
 import java.io.FileDescriptor;
-import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -56,27 +51,10 @@ public class ReportManager implements ReportImportCallbacks {
 
     private static final String TAG = ReportManager.class.getSimpleName();
 
-    private static final String DELETE_FILE_PREFIX = ".deleting.";
-
     private static final long STABILITY_CHECK_INTERVAL = 250;
     private static final int MIN_STABILITY_CHECKS = 2;
 
     private Report userGuideReport = new Report();
-
-    private static final Set<String> supportedReportFileTypes;
-    static {
-        Set<String> types = new TreeSet<>(Arrays.asList(new String[] {
-                "zip", "application/zip",
-                "pdf", "application/pdf",
-                "doc",
-                "docx",
-                "xls",
-                "xlsx",
-                "ppt",
-                "pptx"
-        }));
-        supportedReportFileTypes = Collections.unmodifiableSet(types);
-    }
 
     public static synchronized ReportManager initialize(Context context) {
         return instance = new ReportManager(context);
@@ -145,7 +123,7 @@ public class ReportManager implements ReportImportCallbacks {
 
         handler = new Handler(Looper.getMainLooper());
 
-        reportsDir = new File(Environment.getExternalStorageDirectory(), DICEConstants.DICE_REPORT_DIRECTORY);
+        reportsDir = ReportUtils.getReportDirectory();
         if (!reportsDir.exists()) {
             reportsDir.mkdirs();
         }
@@ -232,7 +210,7 @@ public class ReportManager implements ReportImportCallbacks {
      * @param reportUri
      */
 	public void importReportFromUri(Uri reportUri) {
-        if (!uriCouldBeReport(reportUri)) {
+        if (!ReportUtils.uriCouldBeReport(context, reportUri)) {
             return;
         }
 
@@ -320,13 +298,7 @@ public class ReportManager implements ReportImportCallbacks {
 
         Log.i(TAG, "finding existing reports in " + reportsDir);
 
-        File[] existingReports = reportsDir.listFiles(new FileFilter() {
-            @Override
-            public boolean accept(File path) {
-                return !path.getName().startsWith(DELETE_FILE_PREFIX) &&
-                        (uriCouldBeReport(Uri.fromFile(path)) || pathIsHtmlContentRoot(path));
-            }
-        });
+        File[] existingReports = ReportUtils.getReportDirectories(context, reportsDir);
 
         for (File reportPath : existingReports) {
             Log.d(TAG, "found existing potential report: " + reportPath);
@@ -358,34 +330,6 @@ public class ReportManager implements ReportImportCallbacks {
             userGuideReport.setId(USER_GUIDE_REPORT_ID);
             reports.add(userGuideReport);
         }
-    }
-
-    private boolean pathIsHtmlContentRoot(File path) {
-        if (!path.isDirectory()) {
-            return false;
-        }
-        File index = new File(path, "index.html");
-        return index.exists();
-    }
-
-    private boolean uriCouldBeReport(Uri uri) {
-        String ext = extensionOfFile(uri.getPath()).toLowerCase();
-        if (supportedReportFileTypes.contains(ext)) {
-            return true;
-        }
-        String mimeType = context.getContentResolver().getType(uri);
-        if (mimeType != null) {
-            return supportedReportFileTypes.contains(mimeType);
-        }
-        return false;
-    }
-
-    private String extensionOfFile(String path) {
-        int dot = path.lastIndexOf('.');
-        if (dot < 0 || dot > path.length() - 2) {
-            return "";
-        }
-        return path.substring(dot + 1);
     }
 
     private void broadcastUpdateReportList() {
@@ -455,7 +399,7 @@ public class ReportManager implements ReportImportCallbacks {
      */
     private void continueImport(Report report) {
         String fileName = report.getSourceFileName();
-        String extension = extensionOfFile(fileName);
+        String extension = ReportUtils.extensionOfFile(fileName);
         String mimeType = context.getContentResolver().getType(report.getSourceFile());
 
         if ("application/zip".equals(mimeType) || "zip".equalsIgnoreCase(extension)) {
@@ -528,7 +472,7 @@ public class ReportManager implements ReportImportCallbacks {
                     return;
                 }
                 Uri uri = Uri.fromFile(file);
-                if (uriCouldBeReport(uri)) {
+                if (ReportUtils.uriCouldBeReport(context, uri)) {
                     // not imported yet
                     report = addNewReportForUri(Uri.fromFile(file));
                     broadcastUpdateReportList();
@@ -561,7 +505,7 @@ public class ReportManager implements ReportImportCallbacks {
     }
 
     private boolean renameThenDeleteInBackground(final File path) {
-        File deletePath = new File(path.getParent(), DELETE_FILE_PREFIX + path.getName());
+        File deletePath = new File(path.getParent(), ReportUtils.DELETE_FILE_PREFIX + path.getName());
         if (!path.renameTo(deletePath)) {
             Log.e(TAG, "failed to rename path for deleting: " + path);
         }
@@ -743,7 +687,7 @@ public class ReportManager implements ReportImportCallbacks {
             String name = removeExtension(nameWithExtension);
 
             String reportName = removeExtension(report.getId());
-            name = reportIdPrefix(name, reportName, shared);
+            name = GeoPackageWebViewClient.reportId(name, reportName, shared);
             if(shared){
                 GeoPackageManager manager = GeoPackageFactory.getManager(context);
                 if(!manager.exists(name)) {
@@ -778,29 +722,6 @@ public class ReportManager implements ReportImportCallbacks {
                 files.add(path);
             }
         }
-    }
-
-    // TODO move?
-    public static String reportIdPrefix(String report){
-        String reportIdPrefix = report;
-        if(reportIdPrefix != null){
-            reportIdPrefix = DICEConstants.DICE_TEMP_CACHE_SUFFIX + reportIdPrefix + "-";
-        }
-        return reportIdPrefix;
-    }
-
-    // TODO move?
-    public static String reportIdPrefix(String name, String report, boolean share){
-        String reportId = name;
-        if(!share){
-            String reportIdPrefix = reportIdPrefix(report);
-            if(reportIdPrefix != null){
-                reportId = reportIdPrefix + reportId;
-            }else{
-                reportId = null;
-            }
-        }
-        return reportId;
     }
 
 }

@@ -33,6 +33,7 @@ import mil.nga.dice.R;
 import mil.nga.dice.map.geopackage.GeoPackageMapData;
 import mil.nga.dice.map.geopackage.GeoPackageSelected;
 import mil.nga.dice.map.geopackage.GeoPackageTableMapData;
+import mil.nga.dice.report.ReportUtils;
 import mil.nga.geopackage.GeoPackage;
 import mil.nga.geopackage.GeoPackageManager;
 import mil.nga.geopackage.extension.link.FeatureTileTableLinker;
@@ -141,7 +142,7 @@ public class OverlaysActivity extends AppCompatActivity {
         Map<String, Set<String>> selectedCaches = selectedGeoPackages.getSelectedMap();
 
         GeoPackageManager manager = GeoPackageFactory.getManager(this);
-        File reportsDir = new File(Environment.getExternalStorageDirectory(), DICEConstants.DICE_REPORT_DIRECTORY);
+        File reportsDir = ReportUtils.getReportDirectory();
 
         String like = DICEConstants.DICE_TEMP_CACHE_SUFFIX + "%";
         List<String> geoPackages = manager.databasesNotLike(like);

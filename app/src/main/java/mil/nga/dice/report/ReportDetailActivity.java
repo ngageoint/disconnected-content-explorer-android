@@ -23,6 +23,7 @@ public class ReportDetailActivity extends ActionBarActivity {
 	Report mReport;
     WebView reportWebView;
     JavaScriptAPI jsApi;
+    private GeoPackageWebViewClient geoPackageWebViewClient;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -50,6 +51,9 @@ public class ReportDetailActivity extends ActionBarActivity {
                 reportWebView.restoreState(savedInstanceState);
             }
         }
+
+        geoPackageWebViewClient = new GeoPackageWebViewClient(this, mReport.getId());
+        reportWebView.setWebViewClient(geoPackageWebViewClient);
 	}
 
     @Override
@@ -137,6 +141,7 @@ public class ReportDetailActivity extends ActionBarActivity {
     protected void onDestroy() {
         super.onDestroy();
 
+        geoPackageWebViewClient.close();
         jsApi.removeFromWebView();
     }
 
