@@ -135,21 +135,8 @@ public class GeoPackageWebViewClient extends WebViewClient {
         WebResourceResponse response = null;
         if (request != null) {
             Uri url = request.getUrl();
-            if (url != null) {
-                String path = url.getPath();
-                File file = new File(path);
-                if (GeoPackageValidate.hasGeoPackageExtension(file)) {
-
-                    List<String> tables = url.getQueryParameters(TABLE_PARAM);
-                    String zoom = url.getQueryParameter(ZOOM_PARAM);
-                    String x = url.getQueryParameter(X_PARAM);
-                    String y = url.getQueryParameter(Y_PARAM);
-
-                    response = handleUrl(file, tables, zoom, x, y);
-                }
-            }
+            response = handleUrl(url);
         }
-
         return response;
     }
 
@@ -160,170 +147,215 @@ public class GeoPackageWebViewClient extends WebViewClient {
      */
     @Override
     public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
-        return null; // TODO
+        WebResourceResponse response = null;
+        if (url != null) {
+            Uri uri = Uri.parse(url);
+            response = handleUrl(uri);
+        }
+        return response;
     }
 
-    private WebResourceResponse handleUrl(File file, List<String> tables, String zoom, String x, String y) {
+    /**
+     * Handle the URL and respond with an image
+     *
+     * @param url potential GeoPackage URL
+     * @return response
+     */
+    private WebResourceResponse handleUrl(Uri url) {
 
         WebResourceResponse response = null;
+        if (url != null) {
+            String path = url.getPath();
+            File file = new File(path);
+            if (GeoPackageValidate.hasGeoPackageExtension(file)) {
 
-        if (tables != null && !tables.isEmpty() && zoom != null && x != null && y != null) {
+                List<String> tables = url.getQueryParameters(TABLE_PARAM);
+                String zoom = url.getQueryParameter(ZOOM_PARAM);
+                String x = url.getQueryParameter(X_PARAM);
+                String y = url.getQueryParameter(Y_PARAM);
 
-            int zoomValue = Integer.parseInt(zoom);
-            int xValue = Integer.parseInt(x);
-            int yValue = Integer.parseInt(y);
+                // If all required parameters exist
+                if (tables != null && !tables.isEmpty() && zoom != null && x != null && y != null) {
+                    response = handleUrl(file, tables, zoom, x, y);
+                } else {
+                    Log.e(GeoPackageWebViewClient.class.getSimpleName(),
+                            "GeoPackage url does not contain all required parameters. Url: " + url
+                                    + ", Tables: " + tables + ", zoom: " + zoom + ", x: " + x + ", y: " + y);
+                }
+            }
+        }
 
-            String nameWithExtension = file.getName();
-            String name = DICEFileUtils.removeExtension(nameWithExtension);
+        return response;
+    }
 
-            String localPath = ReportUtils.localReportPath(file);
-            String sharedPrefix = reportId + File.separator + DICEConstants.DICE_REPORT_SHARED_DIRECTORY;
-            boolean shared = localPath.startsWith(sharedPrefix);
+    /**
+     * Handle the URL GeoPackage tile request and respond with an image
+     *
+     * @param file   GeoPackage file
+     * @param tables tables to query
+     * @param zoom   zoom level
+     * @param x      x coordinate
+     * @param y      y coordinate
+     * @return response
+     */
+    private WebResourceResponse handleUrl(File file, List<String> tables, String zoom, String x, String y) {
 
-            name = reportId(name, reportId, shared);
+        int zoomValue = Integer.parseInt(zoom);
+        int xValue = Integer.parseInt(x);
+        int yValue = Integer.parseInt(y);
 
-            GeoPackage geoPackage = null;
+        String nameWithExtension = file.getName();
+        String name = DICEFileUtils.removeExtension(nameWithExtension);
 
-            if (name != null) {
+        String localPath = ReportUtils.localReportPath(file);
+        String sharedPrefix = reportId + File.separator + DICEConstants.DICE_REPORT_SHARED_DIRECTORY;
+        boolean shared = localPath.startsWith(sharedPrefix);
 
-                if (manager.exists(name)) {
+        name = reportId(name, reportId, shared);
+
+        GeoPackage geoPackage = null;
+
+        if (name != null) {
+
+            if (manager.exists(name)) {
+                try {
+                    geoPackage = cache.getOrOpen(name);
+                } catch (Exception e) {
+                    cache.close(name);
+                    manager.delete(name);
+                    geoPackage = null;
+                }
+            }
+
+            if (geoPackage == null) {
+
+                File importFile = file;
+
+                // If a shared file, check if the file exists in this report or another
+                if (shared) {
+
+                    // If the file is not in this report, search other reports
+                    if (!importFile.exists()) {
+
+                        String sharedSearchPath = localPath.substring(reportId.length());
+
+                        File[] reportDirectories = ReportUtils.getReportDirectories(context);
+                        for (File reportDirectory : reportDirectories) {
+
+                            File sharedLocation = new File(reportDirectory, sharedSearchPath);
+
+                            if (sharedLocation.exists()) {
+                                importFile = sharedLocation;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (importFile.exists()) {
+                    manager.importGeoPackageAsExternalLink(importFile, name);
                     try {
                         geoPackage = cache.getOrOpen(name);
                     } catch (Exception e) {
-                        cache.close(name);
-                        manager.delete(name);
+                        Log.e(GeoPackageWebViewClient.class.getSimpleName(),
+                                "Failed to open GeoPackage " + name + " at path: " + importFile.getAbsolutePath(), e);
                         geoPackage = null;
                     }
                 }
-
-                if (geoPackage == null) {
-
-                    File importFile = file;
-
-                    // If a shared file, check if the file exists in this report or another
-                    if (shared) {
-
-                        // If the file is not in this report, search other reports
-                        if (!importFile.exists()) {
-
-                            String sharedSearchPath = localPath.substring(reportId.length());
-
-                            File[] reportDirectories = ReportUtils.getReportDirectories(context);
-                            for (File reportDirectory : reportDirectories) {
-
-                                File sharedLocation = new File(reportDirectory, sharedSearchPath);
-
-                                if (sharedLocation.exists()) {
-                                    importFile = sharedLocation;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    if (importFile.exists()) {
-                        manager.importGeoPackageAsExternalLink(importFile, name);
-                        try {
-                            geoPackage = cache.getOrOpen(name);
-                        } catch (Exception e) {
-                            // TODO
-                            geoPackage = null;
-                        }
-                    }
-                }
             }
+        }
 
-            byte[] tileData = null;
+        byte[] tileData = null;
 
-            if (geoPackage != null) {
-                for (String table : tables) {
+        if (geoPackage != null) {
+            for (String table : tables) {
 
-                    // Get or create the GeoPackage data
-                    GeoPackageMapData geoPackageData = mapData.get(name);
-                    if (geoPackageData == null) {
-                        geoPackageData = new GeoPackageMapData(name);
-                        mapData.put(name, geoPackageData);
+                // Get or create the GeoPackage data
+                GeoPackageMapData geoPackageData = mapData.get(name);
+                if (geoPackageData == null) {
+                    geoPackageData = new GeoPackageMapData(name);
+                    mapData.put(name, geoPackageData);
+                }
+                // Get or create the table data
+                GeoPackageTableMapData tableData = geoPackageData.getTable(table);
+                if (tableData == null) {
+                    tableData = new GeoPackageTableMapData(table, geoPackage.isFeatureTable(table));
+                    geoPackageData.addTable(tableData);
+                } else {
+                    // Feature Overlay Queries have already been added for this table
+                    tableData = null;
+                }
+
+                if (geoPackage.isTileTable(table)) {
+
+                    TileDao tileDao = geoPackage.getTileDao(table);
+
+                    GeoPackageTileRetriever retriever = new GeoPackageTileRetriever(tileDao);
+                    if (retriever.hasTile(xValue, yValue, zoomValue)) {
+                        GeoPackageTile tile = retriever.getTile(xValue, yValue, zoomValue);
+                        if (tile != null) {
+                            tileData = tile.getData();
+                        }
                     }
-                    // Get or create the table data
-                    GeoPackageTableMapData tableData = geoPackageData.getTable(table);
-                    if (tableData == null) {
-                        tableData = new GeoPackageTableMapData(table, geoPackage.isFeatureTable(table));
-                        geoPackageData.addTable(tableData);
-                    } else {
-                        // Feature Overlay Queries have already been added for this table
-                        tableData = null;
-                    }
 
-                    if (geoPackage.isTileTable(table)) {
+                    // If the first time handling this table
+                    if (tableData != null) {
+                        // Check for linked feature tables
+                        BoundedOverlay geoPackageTileOverlay = GeoPackageOverlayFactory.getBoundedOverlay(tileDao);
+                        FeatureTileTableLinker linker = new FeatureTileTableLinker(geoPackage);
+                        List<FeatureDao> featureDaos = linker.getFeatureDaosForTileTable(tileDao.getTableName());
+                        for (FeatureDao featureDao : featureDaos) {
 
-                        TileDao tileDao = geoPackage.getTileDao(table);
+                            // Create the feature tiles
+                            FeatureTiles featureTiles = new MapFeatureTiles(context, featureDao);
 
-                        GeoPackageTileRetriever retriever = new GeoPackageTileRetriever(tileDao);
-                        if (retriever.hasTile(xValue, yValue, zoomValue)) {
-                            GeoPackageTile tile = retriever.getTile(xValue, yValue, zoomValue);
-                            if (tile != null) {
-                                tileData = tile.getData();
-                            }
-                        }
-
-                        // If the first time handling this table
-                        if (tableData != null) {
-                            // Check for linked feature tables
-                            BoundedOverlay geoPackageTileOverlay = GeoPackageOverlayFactory.getBoundedOverlay(tileDao);
-                            FeatureTileTableLinker linker = new FeatureTileTableLinker(geoPackage);
-                            List<FeatureDao> featureDaos = linker.getFeatureDaosForTileTable(tileDao.getTableName());
-                            for (FeatureDao featureDao : featureDaos) {
-
-                                // Create the feature tiles
-                                FeatureTiles featureTiles = new MapFeatureTiles(context, featureDao);
-
-                                // Create an index manager
-                                FeatureIndexManager indexer = new FeatureIndexManager(context, geoPackage, featureDao);
-                                featureTiles.setIndexManager(indexer);
-
-                                // Add the feature overlay query
-                                FeatureOverlayQuery featureOverlayQuery = new FeatureOverlayQuery(context, geoPackageTileOverlay, featureTiles);
-                                tableData.addFeatureOverlayQuery(featureOverlayQuery);
-                            }
-                        }
-
-                    } else if (geoPackage.isFeatureTable(table)) {
-
-                        FeatureDao featureDao = geoPackage.getFeatureDao(table);
-                        FeatureTiles featureTiles = new MapFeatureTiles(context, featureDao);
-                        FeatureIndexManager indexer = new FeatureIndexManager(context, geoPackage, featureDao);
-                        featureTiles.setIndexManager(indexer);
-                        if (featureTiles.isIndexQuery() && featureTiles.queryIndexedFeaturesCount(xValue, yValue, zoomValue) > 0) {
-                            tileData = featureTiles.drawTileBytes(xValue, yValue, zoomValue);
-                        }
-
-                        if (tableData != null && featureTiles.isIndexQuery()) {
+                            // Create an index manager
+                            FeatureIndexManager indexer = new FeatureIndexManager(context, geoPackage, featureDao);
                             featureTiles.setIndexManager(indexer);
 
-                            FeatureOverlay featureOverlay = new FeatureOverlay(featureTiles);
-                            featureOverlay.setMinZoom(featureDao.getZoomLevel());
-
-                            FeatureTileTableLinker linker = new FeatureTileTableLinker(geoPackage);
-                            List<TileDao> tileDaos = linker.getTileDaosForFeatureTable(featureDao.getTableName());
-                            featureOverlay.ignoreTileDaos(tileDaos);
-
-                            FeatureOverlayQuery featureOverlayQuery = new FeatureOverlayQuery(context, featureOverlay);
+                            // Add the feature overlay query
+                            FeatureOverlayQuery featureOverlayQuery = new FeatureOverlayQuery(context, geoPackageTileOverlay, featureTiles);
                             tableData.addFeatureOverlayQuery(featureOverlayQuery);
                         }
-
                     }
 
-                    if (tileData != null) {
-                        break;
+                } else if (geoPackage.isFeatureTable(table)) {
+
+                    FeatureDao featureDao = geoPackage.getFeatureDao(table);
+                    FeatureTiles featureTiles = new MapFeatureTiles(context, featureDao);
+                    FeatureIndexManager indexer = new FeatureIndexManager(context, geoPackage, featureDao);
+                    featureTiles.setIndexManager(indexer);
+                    if (featureTiles.isIndexQuery() && featureTiles.queryIndexedFeaturesCount(xValue, yValue, zoomValue) > 0) {
+                        tileData = featureTiles.drawTileBytes(xValue, yValue, zoomValue);
+                    }
+
+                    if (tableData != null && featureTiles.isIndexQuery()) {
+                        featureTiles.setIndexManager(indexer);
+
+                        FeatureOverlay featureOverlay = new FeatureOverlay(featureTiles);
+                        featureOverlay.setMinZoom(featureDao.getZoomLevel());
+
+                        FeatureTileTableLinker linker = new FeatureTileTableLinker(geoPackage);
+                        List<TileDao> tileDaos = linker.getTileDaosForFeatureTable(featureDao.getTableName());
+                        featureOverlay.ignoreTileDaos(tileDaos);
+
+                        FeatureOverlayQuery featureOverlayQuery = new FeatureOverlayQuery(context, featureOverlay);
+                        tableData.addFeatureOverlayQuery(featureOverlayQuery);
                     }
 
                 }
-            }
 
-            if (tileData != null) {
-                InputStream is = new ByteArrayInputStream(tileData);
-                response = new WebResourceResponse("text/html", "UTF-8", is);
+                if (tileData != null) {
+                    break;
+                }
+
             }
+        }
+
+        WebResourceResponse response = null;
+        if (tileData != null) {
+            InputStream is = new ByteArrayInputStream(tileData);
+            response = new WebResourceResponse("text/html", "UTF-8", is);
         }
 
         return response;
