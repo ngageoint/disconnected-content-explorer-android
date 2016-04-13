@@ -206,21 +206,18 @@ public class GeoPackageWebViewClient extends WebViewClient {
                         // If the file is not in this report, search other reports
                         if (!importFile.exists()) {
 
-                            // TODO
-                            //NSString * sharedSearchPath = [localPath substringFromIndex:[currentId length]];
+                            String sharedSearchPath = localPath.substring(reportId.length());
 
                             File[] reportDirectories = ReportUtils.getReportDirectories(context);
                             for (File reportDirectory : reportDirectories) {
 
-                                File sharedLocation = new File("."); // TODO
-                                //NSString * sharedLocation = [NSString stringWithFormat:@"%@%@", reportDirectory, sharedSearchPath];
+                                File sharedLocation = new File(reportDirectory, sharedSearchPath);
 
                                 if (sharedLocation.exists()) {
                                     importFile = sharedLocation;
                                     break;
                                 }
                             }
-
                         }
                     }
 
