@@ -41,9 +41,11 @@ public class ReportDetailActivity extends ActionBarActivity {
         settings.setJavaScriptEnabled(true);
         enableFileAjax(reportWebView);
 
+        geoPackageWebViewClient = new GeoPackageWebViewClient(this, mReport.getId());
+
         File reportFile = new File(mReport.getPath(), "index.html");
         if (reportFile.canRead() && reportFile.length() > 0) {
-            jsApi = JavaScriptAPI.addTo(reportWebView, mReport, this);
+            jsApi = JavaScriptAPI.addTo(reportWebView, mReport, this, geoPackageWebViewClient);
             if (savedInstanceState == null) {
                 reportWebView.loadUrl(Uri.fromFile(reportFile).toString());
             }
@@ -52,8 +54,6 @@ public class ReportDetailActivity extends ActionBarActivity {
             }
         }
 
-        geoPackageWebViewClient = new GeoPackageWebViewClient(this, mReport.getId());
-        reportWebView.setWebViewClient(geoPackageWebViewClient);
 	}
 
     @Override
@@ -141,7 +141,6 @@ public class ReportDetailActivity extends ActionBarActivity {
     protected void onDestroy() {
         super.onDestroy();
 
-        geoPackageWebViewClient.close();
         jsApi.removeFromWebView();
     }
 

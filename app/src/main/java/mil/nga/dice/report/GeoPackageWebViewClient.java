@@ -8,7 +8,6 @@ import android.util.Log;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
-import android.webkit.WebViewClient;
 
 import com.google.android.gms.maps.model.LatLng;
 
@@ -45,7 +44,7 @@ import mil.nga.geopackage.validate.GeoPackageValidate;
 /**
  * GeoPackage Web View for intercepting and responding to GeoPackage tile URL requests
  */
-public class GeoPackageWebViewClient extends WebViewClient {
+public class GeoPackageWebViewClient extends WebViewJavascriptBridgeClient {
 
     /**
      * Table URL parameter
@@ -66,11 +65,6 @@ public class GeoPackageWebViewClient extends WebViewClient {
      * Y URL Parameter
      */
     private static final String Y_PARAM = "y";
-
-    /**
-     * Application context
-     */
-    private final Context context;
 
     /**
      * GeoPackage manager
@@ -99,7 +93,7 @@ public class GeoPackageWebViewClient extends WebViewClient {
      * @param reportId report id
      */
     public GeoPackageWebViewClient(Context context, String reportId) {
-        this.context = context;
+        super(context);
         manager = GeoPackageFactory.getManager(context);
         cache = new GeoPackageCache(manager);
         this.reportId = reportId;
@@ -341,6 +335,8 @@ public class GeoPackageWebViewClient extends WebViewClient {
 
                         FeatureOverlayQuery featureOverlayQuery = new FeatureOverlayQuery(context, featureOverlay);
                         tableData.addFeatureOverlayQuery(featureOverlayQuery);
+                    }else{
+                        featureTiles.close();
                     }
 
                 }
