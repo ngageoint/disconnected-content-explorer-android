@@ -223,7 +223,6 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
                 break;
 
             case OVERLAYS_ACTIVITY:
-                // TODO
                 break;
 
             default:
