@@ -125,7 +125,7 @@ public class JavaScriptAPI implements ConnectionCallbacks, OnConnectionFailedLis
             try {
                 JSONObject jsonObject = new JSONObject(data);
                 double lat = jsonObject.getDouble("lat");
-                double lon = jsonObject.getDouble("lon");
+                double lon = jsonObject.getDouble("lng");
                 double zoom = jsonObject.getDouble("zoom");
                 JSONObject bounds = jsonObject.getJSONObject("bounds");
 
