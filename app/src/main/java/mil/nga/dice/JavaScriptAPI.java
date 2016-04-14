@@ -154,14 +154,14 @@ public class JavaScriptAPI implements ConnectionCallbacks, OnConnectionFailedLis
                         Map<String, Object> clickData = geoPackage.mapClickTableData(location, zoom, mapBounds, includePoints, includeGeometries);
 
                         if(clickData == null){
-                            jsCallback.callback("{\"success\":true,\"message\":\"" + jsonData.toString() + "\"}");
+                            jsCallback.callback("{\"success\":true,\"message\":\"\"}");
                         }else{
                             try {
                                 JSONObject jsonData = new JSONObject(clickData);
-                                jsCallback.callback("{\"success\":true,\"message\":\"\"}");
-                            }catch(JSONException e2){
+                                jsCallback.callback("{\"success\":true,\"message\":\"" + jsonData.toString() + "\"}");
+                            }catch(Exception e2){
                                 Log.e(JavaScriptAPI.class.getSimpleName(), "Failed to build JSON response", e2);
-                                jsCallback.callback("{\"success\":false,\"message\":\"DICE failed to build JSON response. " + e.getMessage() + "\"}");
+                                jsCallback.callback("{\"success\":false,\"message\":\"DICE failed to build JSON response. " + e2.getMessage() + "\"}");
                             }
                         }
                     }else{
