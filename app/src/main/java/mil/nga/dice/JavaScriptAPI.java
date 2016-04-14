@@ -20,10 +20,13 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Map;
 
 import mil.nga.dice.report.GeoPackageWebViewClient;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportManager;
+import mil.nga.geopackage.BoundingBox;
+import mil.nga.geopackage.GeoPackage;
 
 /**
 
@@ -126,8 +129,48 @@ public class JavaScriptAPI implements ConnectionCallbacks, OnConnectionFailedLis
                 double zoom = jsonObject.getDouble("zoom");
                 JSONObject bounds = jsonObject.getJSONObject("bounds");
 
-                LatLng location = new LatLng(lat, lon);
-                // TODO
+                if(bounds != null) {
+                    LatLng location = new LatLng(lat, lon);
+
+                    BoundingBox mapBounds = null;
+                    JSONObject southWest = bounds.getJSONObject("_southWest");
+                    JSONObject northEast = bounds.getJSONObject("_northEast");
+                    if(southWest != null && northEast != null){
+                        double minLon = southWest.getDouble("lng");
+                        double maxLon = northEast.getDouble("lng");
+                        double minLat = southWest.getDouble("lat");
+                        double maxLat = northEast.getDouble("lat");
+                        mapBounds = new BoundingBox(minLon, maxLon, minLat, maxLat);
+                    }
+
+                    if(mapBounds != null) {
+
+                        // Include points by default
+                        boolean includePoints =  jsonObject.optBoolean("points", true);
+
+                        // Do not include geometries by default
+                        boolean includeGeometries = jsonObject.optBoolean("geometries", true);
+
+                        Map<String, Object> clickData = geoPackage.mapClickTableData(location, zoom, mapBounds, includePoints, includeGeometries);
+
+                        if(clickData == null){
+                            jsCallback.callback("{\"success\":true,\"message\":\"" + jsonData.toString() + "\"}");
+                        }else{
+                            try {
+                                JSONObject jsonData = new JSONObject(clickData);
+                                jsCallback.callback("{\"success\":true,\"message\":\"\"}");
+                            }catch(JSONException e2){
+                                Log.e(JavaScriptAPI.class.getSimpleName(), "Failed to build JSON response", e2);
+                                jsCallback.callback("{\"success\":false,\"message\":\"DICE failed to build JSON response. " + e.getMessage() + "\"}");
+                            }
+                        }
+                    }else{
+                        jsCallback.callback("{\"success\":false,\"message\":\"Data bounds did not contain correct _southWest and _northWest values\"}");
+                    }
+                }else{
+                    jsCallback.callback("{\"success\":false,\"message\":\"Data did not contain bounds value\"}");
+                }
+
             }catch(JSONException e){
                 Log.e(JavaScriptAPI.class.getSimpleName(), "Failed to parse JSON: " + data, e);
                 jsCallback.callback("{\"success\":false,\"message\":\"DICE failed to parse JSON. " + e.getMessage() + "\"}");
