@@ -1,6 +1,7 @@
 package mil.nga.dice.report;
 
 import android.content.Context;
+import android.os.Build;
 import android.util.Log;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -34,7 +35,12 @@ public class WebViewJavascriptBridgeClient extends WebViewClient {
     private void loadWebViewJavascriptBridgeJs(WebView webView) {
         InputStream is = context.getResources().openRawResource(R.raw.webviewjavascriptbridge);
         String script = convertStreamToString(is);
-        webView.loadUrl("javascript:" + script);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            webView.evaluateJavascript(script, null);
+        }
+        else {
+            webView.loadUrl("javascript:" + script);
+        }
     }
 
     public static String convertStreamToString(java.io.InputStream is) {
