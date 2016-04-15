@@ -8,7 +8,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.webkit.MimeTypeMap;
@@ -44,7 +44,7 @@ import mil.nga.dice.report.ReportManager;
  *   <li>add reports using <a href="http://developer.android.com/guide/topics/providers/document-provider.html">Storage Access Framework</a></li>
  * </ol>
  */
-public class ReportCollectionActivity extends ActionBarActivity
+public class ReportCollectionActivity extends AppCompatActivity
 implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialogDismissedListener, SwipeRefreshLayout.OnRefreshListener {
     
     public static final String TAG = "ReportCollection";
@@ -55,6 +55,11 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
      * Permissions request code for importing a GeoPackage as an external link
      */
     public static final int PERMISSIONS_REQUEST_IMPORT_GEOPACKAGE = 200;
+
+    /**
+     * Manager permissions request code for reading / writing reports in external storage
+     */
+    public static final int PERMISSIONS_REQUEST_REPORTS_ACCESS = 201;
 
     /**
      * Intent activity request code when opening app settings
@@ -114,7 +119,7 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
     protected void onRestart() {
         super.onRestart();
 
-        ReportManager.getInstance().refreshReports();
+        ReportManager.getInstance().refreshReports(this);
     }
 
     @Override
@@ -191,7 +196,7 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
 
     @Override
     public void onRefresh() {
-        ReportManager.getInstance().refreshReports();
+        ReportManager.getInstance().refreshReports(this);
     }
 
     @Override
@@ -220,6 +225,7 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
         switch (requestCode) {
 
             case ACTIVITY_APP_SETTINGS:
+                ReportManager.getInstance().refreshReports(this);
                 break;
 
             case OVERLAYS_ACTIVITY:
@@ -333,6 +339,10 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
             case PERMISSIONS_REQUEST_IMPORT_GEOPACKAGE:
                 geoPackageCache.importGeoPackageExternalLinkAfterPermissionGranted(granted);
                 break;
+            case PERMISSIONS_REQUEST_REPORTS_ACCESS:
+                ReportManager.getInstance().refreshReportsWithPermissions(this, granted);
+                break;
+
 
         }
     }

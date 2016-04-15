@@ -83,11 +83,12 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
         }
         mRecyclerView.setLayoutManager(mLayoutManager);
         mRecyclerView.setAdapter(mAdapter);
+        ReportManager.getInstance().refreshReports(getActivity());
         return v;
     }
 
     @Override
     public void onRefresh() {
-        ReportManager.getInstance().refreshReports();
+        ReportManager.getInstance().refreshReports(getActivity());
     }
 }

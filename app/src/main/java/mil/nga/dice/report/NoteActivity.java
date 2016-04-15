@@ -1,5 +1,13 @@
 package mil.nga.dice.report;
 
+import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.widget.TextView;
+import android.widget.Toast;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -9,15 +17,7 @@ import java.io.InputStreamReader;
 
 import mil.nga.dice.R;
 
-import android.os.Bundle;
-import android.support.v7.app.ActionBarActivity;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
-import android.widget.TextView;
-import android.widget.Toast;
-
-public class NoteActivity extends ActionBarActivity {
+public class NoteActivity extends AppCompatActivity {
 	
 	private Report mReport;
 	private File notesDirectory = ReportManager.getInstance().getNotesDir();

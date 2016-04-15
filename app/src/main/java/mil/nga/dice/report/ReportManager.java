@@ -1,8 +1,13 @@
 package mil.nga.dice.report;
 
+import android.Manifest;
+import android.app.Activity;
+import android.app.Dialog;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.drawable.Drawable;
@@ -12,7 +17,11 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
 import android.provider.OpenableColumns;
+import android.provider.Settings;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
 
 import java.io.File;
@@ -36,6 +45,7 @@ import java.util.concurrent.TimeUnit;
 
 import mil.nga.dice.DICEConstants;
 import mil.nga.dice.R;
+import mil.nga.dice.ReportCollectionActivity;
 import mil.nga.geopackage.GeoPackageConstants;
 import mil.nga.geopackage.GeoPackageManager;
 import mil.nga.geopackage.factory.GeoPackageFactory;
@@ -136,7 +146,6 @@ public class ReportManager implements ReportImportCallbacks {
             throw new RuntimeException("notes directory does not exist and could not be created: " + notesDir);
         }
 
-        refreshReports();
 	}
 
     public void destroy() {
@@ -158,10 +167,63 @@ public class ReportManager implements ReportImportCallbacks {
         return reportsView;
     }
 
-    public void refreshReports() {
+    public void refreshReports(final Activity activity) {
         removeDeletedAndErrorReports();
-        findExistingReports();
-        broadcastUpdateReportList();
+
+        // If we have external storage permission, refresh the reports
+        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+            refreshReportsWithPermissions(activity, true);
+        } else {
+            // Should we justify why we need permission?
+            if (ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                new AlertDialog.Builder(activity, R.style.AppCompatAlertDialogStyle)
+                        .setTitle(R.string.storage_access_rational_title)
+                        .setMessage(R.string.storage_access_rational_message)
+                        .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                // Request permission
+                                ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, ReportCollectionActivity.PERMISSIONS_REQUEST_REPORTS_ACCESS);
+                            }
+                        })
+                        .create()
+                        .show();
+
+            } else {
+                // Request permission
+                ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, ReportCollectionActivity.PERMISSIONS_REQUEST_REPORTS_ACCESS);
+            }
+        }
+
+    }
+
+    /**
+     * Refresh the reports after attempting to obtain external storage permission
+     *
+     * @param granted true if granted, false if denied
+     */
+    public void refreshReportsWithPermissions(final Activity activity, boolean granted) {
+        if(granted) {
+            findExistingReports();
+            broadcastUpdateReportList();
+        }else{
+            // If the user has declared to no longer get asked about permissions
+            if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                new AlertDialog.Builder(activity, R.style.AppCompatAlertDialogStyle)
+                        .setTitle(context.getResources().getString(R.string.storage_access_denied_title))
+                        .setMessage(context.getResources().getString(R.string.storage_access_denied_message))
+                        .setPositiveButton(R.string.settings, new Dialog.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                                intent.setData(Uri.fromParts("package", activity.getPackageName(), null));
+                                activity.startActivityForResult(intent, ReportCollectionActivity.ACTIVITY_APP_SETTINGS);
+                            }
+                        })
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+            }
+        }
         broadcastEndRefresh();
     }
 

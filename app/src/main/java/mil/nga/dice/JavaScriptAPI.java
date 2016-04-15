@@ -1,8 +1,18 @@
 package mil.nga.dice;
 
+import android.Manifest;
 import android.app.Activity;
+import android.app.Dialog;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.Location;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.webkit.WebView;
 
@@ -24,9 +34,9 @@ import java.util.Map;
 
 import mil.nga.dice.report.GeoPackageWebViewClient;
 import mil.nga.dice.report.Report;
+import mil.nga.dice.report.ReportDetailActivity;
 import mil.nga.dice.report.ReportManager;
 import mil.nga.geopackage.BoundingBox;
-import mil.nga.geopackage.GeoPackage;
 
 /**
 
@@ -45,7 +55,7 @@ public class JavaScriptAPI implements ConnectionCallbacks, OnConnectionFailedLis
     private WebViewJavascriptBridge bridge;
     private GoogleApiClient mGoogleApiClient;
     private GeoPackageWebViewClient geoPackage;
-
+    private WebViewJavascriptBridge.WVJBResponseCallback jsCallbackAfterPermissions;
 
     private JavaScriptAPI(Activity a, Report r, WebView w, GeoPackageWebViewClient geoPackageClient) {
         mActivity = a;
@@ -108,13 +118,67 @@ public class JavaScriptAPI implements ConnectionCallbacks, OnConnectionFailedLis
     private void geolocate(WebViewJavascriptBridge.WVJBResponseCallback jsCallback){
         Log.i(TAG, "Bridge received a call to getLocation");
         if (jsCallback != null) {
-            Location location = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-            if (location != null) {
-                // get the users location and send it back
-                jsCallback.callback("{\"success\":true,\"lat\":\"" + location.getLatitude() + "\",\"lon\":\"" + location.getLongitude() + "\"}");
+            Location location = null;
+
+            jsCallbackAfterPermissions = jsCallback;
+            if (ContextCompat.checkSelfPermission(mActivity, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                geolocateWithPermissions(true);
+            }else{
+                if (ActivityCompat.shouldShowRequestPermissionRationale(mActivity, android.Manifest.permission.ACCESS_FINE_LOCATION)) {
+                    new AlertDialog.Builder(mActivity, R.style.AppCompatAlertDialogStyle)
+                            .setTitle(R.string.location_access_rational_title)
+                            .setMessage(R.string.location_access_rational_message)
+                            .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    ActivityCompat.requestPermissions(mActivity, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, ReportDetailActivity.PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
+                                }
+                            })
+                            .create()
+                            .show();
+
+                } else {
+                    ActivityCompat.requestPermissions(mActivity, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, ReportDetailActivity.PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
+                }
             }
-            else {
-                jsCallback.callback("{\"success\":false,\"message\":\"DICE could not determine your location.  Ensure location services are enabled on your device.\"}");
+        }
+    }
+
+    /**
+     * GeoLocate with the permission either granted or denied
+     * @param granted true if granted
+     */
+    public void geolocateWithPermissions(boolean granted){
+        if(granted) {
+            try {
+                Location location = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+                if (location != null) {
+                    // get the users location and send it back
+                    jsCallbackAfterPermissions.callback("{\"success\":true,\"lat\":\"" + location.getLatitude() + "\",\"lon\":\"" + location.getLongitude() + "\"}");
+                } else {
+                    jsCallbackAfterPermissions.callback("{\"success\":false,\"message\":\"DICE could not determine your location.  Ensure location services are enabled on your device.\"}");
+                }
+            }catch(SecurityException e){
+                Log.e(TAG, "Failed to get user location after permissions were granted", e);
+                jsCallbackAfterPermissions.callback("{\"success\":false,\"message\":\"DICE does not have location permissions to determine your location.\"}");
+            }
+        }else{
+            jsCallbackAfterPermissions.callback("{\"success\":false,\"message\":\"DICE does not have location permissions to determine your location.\"}");
+            // If the user has declared to no longer get asked about permissions
+            if (!ActivityCompat.shouldShowRequestPermissionRationale(mActivity, Manifest.permission.ACCESS_FINE_LOCATION)) {
+                new AlertDialog.Builder(mActivity, R.style.AppCompatAlertDialogStyle)
+                        .setTitle(mActivity.getResources().getString(R.string.location_access_denied_title))
+                        .setMessage(mActivity.getResources().getString(R.string.location_access_denied_message))
+                        .setPositiveButton(R.string.settings, new Dialog.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                                intent.setData(Uri.fromParts("package", mActivity.getPackageName(), null));
+                                mActivity.startActivity(intent);
+                            }
+                        })
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
             }
         }
     }
