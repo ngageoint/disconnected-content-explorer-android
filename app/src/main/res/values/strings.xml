@@ -5,6 +5,7 @@
     <string name="title_activity_about">About DICE</string>
     <string name="title_activity_note">Note</string>
     <string name="title_activity_report_collection">DICE</string>
+    <string name="title_activity_overlays">Overlays</string>
     <string name="title_report_detail">Report Detail</string>
     <string name="action_about">About DICE</string>
     <string name="action_add_content">Add Content</string>

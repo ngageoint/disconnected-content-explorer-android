@@ -5,12 +5,17 @@ package mil.nga.dice.map;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -112,13 +117,6 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
 			return;
 		}
 
-        // Only show the overlay button if there are GeoPackages
-        if(geoPackageMapOverlays.hasGeoPackages()) {
-            mapOverlaysView.setVisibility(View.VISIBLE);
-        }else{
-            mapOverlaysView.setVisibility(View.INVISIBLE);
-        }
-
         if (reportMarkers != null) {
             Iterator<Marker> markers = this.reportMarkers.iterator();
             while (markers.hasNext()) {
@@ -170,9 +168,45 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
             }
         }
 
-        geoPackageMapOverlays.updateMap();
+        // Check for permission
+        final FragmentActivity activity = getActivity();
+        if(activity != null) {
+            if (ContextCompat.checkSelfPermission(activity, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+
+                // Only show the overlay button if there are GeoPackages
+                if (geoPackageMapOverlays.hasGeoPackages()) {
+                    mapOverlaysView.setVisibility(View.VISIBLE);
+                } else {
+                    mapOverlaysView.setVisibility(View.INVISIBLE);
+                }
+
+                geoPackageMapOverlays.updateMap();
+
+            } else {
+
+                mapOverlaysView.setVisibility(View.INVISIBLE);
+
+                if (ActivityCompat.shouldShowRequestPermissionRationale(activity, android.Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                    new AlertDialog.Builder(activity, R.style.AppCompatAlertDialogStyle)
+                            .setTitle(R.string.storage_access_rational_title)
+                            .setMessage(R.string.storage_access_rational_message)
+                            .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    ActivityCompat.requestPermissions(activity, new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, ReportCollectionActivity.PERMISSIONS_REQUEST_OVERLAYS);
+                                }
+                            })
+                            .create()
+                            .show();
+
+                } else {
+                    ActivityCompat.requestPermissions(activity, new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, ReportCollectionActivity.PERMISSIONS_REQUEST_OVERLAYS);
+                }
+            }
+        }
+
 	}
-	
+
 	@Override
 	public void onResume() {
 		super.onResume();

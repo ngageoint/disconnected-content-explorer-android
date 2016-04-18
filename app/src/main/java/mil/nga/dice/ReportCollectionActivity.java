@@ -57,9 +57,14 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
     public static final int PERMISSIONS_REQUEST_IMPORT_GEOPACKAGE = 200;
 
     /**
-     * Manager permissions request code for reading / writing reports in external storage
+     * Permissions request code for reading / writing reports in external storage
      */
     public static final int PERMISSIONS_REQUEST_REPORTS_ACCESS = 201;
+
+    /**
+     * Permissions request code for displaying overlay son the map
+     */
+    public static final int PERMISSIONS_REQUEST_OVERLAYS = 202;
 
     /**
      * Intent activity request code when opening app settings
@@ -340,9 +345,9 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
                 geoPackageCache.importGeoPackageExternalLinkAfterPermissionGranted(granted);
                 break;
             case PERMISSIONS_REQUEST_REPORTS_ACCESS:
+            case PERMISSIONS_REQUEST_OVERLAYS:
                 ReportManager.getInstance().refreshReportsWithPermissions(this, granted);
                 break;
-
 
         }
     }
