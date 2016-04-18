@@ -1,16 +1,27 @@
 package mil.nga.dice.map;
 
 //import android.app.Fragment;
-import android.support.v4.app.Fragment;
+
+import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -23,6 +34,7 @@ import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
@@ -30,7 +42,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import mil.nga.dice.DICEConstants;
 import mil.nga.dice.R;
+import mil.nga.dice.ReportCollectionActivity;
+import mil.nga.dice.map.geopackage.GeoPackageMapOverlays;
 import mil.nga.dice.report.Report;
 import mil.nga.dice.report.ReportDetailActivity;
 import mil.nga.dice.report.ReportManager;
@@ -38,7 +53,6 @@ import mil.nga.dice.report.ReportManager;
 public class ReportMapFragment extends android.support.v4.app.Fragment implements
         OnMapReadyCallback, OnMapClickListener, OnMarkerClickListener,
         OnMapLongClickListener, OnInfoWindowClickListener {
-
 
 	private static final String TAG = "ReportMap";
 
@@ -48,7 +62,9 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
     private MapView mapView;
     private GoogleMap map;
     private OfflineMap offlineMap;
-
+    private GeoPackageMapOverlays geoPackageMapOverlays;
+    private View mapOverlaysView;
+    private SharedPreferences settings;
 
 	public ReportMapFragment() {}
 
@@ -61,11 +77,17 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
 
 		LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getActivity().getApplicationContext());
 		bm.registerReceiver(new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				refreshMapMarkers();
-			}
-		}, new IntentFilter(ReportManager.INTENT_UPDATE_REPORT_LIST));
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                refreshMapMarkers();
+            }
+        }, new IntentFilter(ReportManager.INTENT_UPDATE_REPORT_LIST));
+
+        settings = PreferenceManager
+                .getDefaultSharedPreferences(getActivity());
+        Editor editor = settings.edit();
+        editor.putBoolean(DICEConstants.DICE_ZOOM_TO_REPORTS, true);
+        editor.commit();
 	}
 
 	@Override
@@ -75,7 +97,18 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
 		mapView = (MapView) view.findViewById(R.id.map);
 		mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
-		
+
+        mapOverlaysView = view.findViewById(R.id.mapOverlays);
+        ImageButton mapOverlaysButton = (ImageButton) mapOverlaysView
+                .findViewById(R.id.mapOverlaysButton);
+        mapOverlaysButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View arg0) {
+                Intent intent = new Intent(getActivity(), OverlaysActivity.class);
+                getActivity().startActivityForResult(intent, ReportCollectionActivity.OVERLAYS_ACTIVITY);
+            }
+        });
+
 		return view;
 	}
 	
@@ -93,7 +126,16 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
             }
         }
 
+        boolean zoom = settings.getBoolean(DICEConstants.DICE_ZOOM_TO_REPORTS, true);
+        if(zoom){
+            Editor editor = settings.edit();
+            editor.putBoolean(DICEConstants.DICE_ZOOM_TO_REPORTS, false);
+            editor.commit();
+        }
+
         reportMarkers = new ArrayList<>(reports.size());
+
+        LatLngBounds.Builder zoomBounds = null;
 
 		for (Report report : reports) {
 			if (report.getLat() != null && report.getLon() != null) {
@@ -102,27 +144,85 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
                         .title(report.getTitle())
                         .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
 				reportMarkers.add(map.addMarker(marker));
+
+                if(zoom){
+                    if(zoomBounds == null){
+                        zoomBounds = new LatLngBounds.Builder();
+                    }
+                    zoomBounds.include(marker.getPosition());
+                }
 			}
 		}
+
+        // Zoom to the reports
+        if(zoomBounds != null){
+            View view = getView();
+            int minViewLength = Math.min(view.getWidth(), view.getHeight());
+            final int padding = (int) Math.floor(minViewLength * 0.1);
+            try {
+                map.animateCamera(CameraUpdateFactory.newLatLngBounds(
+                        zoomBounds.build(), padding));
+            } catch (Exception e) {
+                Log.w(ReportMapFragment.class.getSimpleName(),
+                        "Unable to move camera", e);
+            }
+        }
+
+        // Check for permission
+        final FragmentActivity activity = getActivity();
+        if(activity != null) {
+            if (ContextCompat.checkSelfPermission(activity, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+
+                // Only show the overlay button if there are GeoPackages
+                if (geoPackageMapOverlays.hasGeoPackages()) {
+                    mapOverlaysView.setVisibility(View.VISIBLE);
+                } else {
+                    mapOverlaysView.setVisibility(View.INVISIBLE);
+                }
+
+                geoPackageMapOverlays.updateMap();
+
+            } else {
+
+                mapOverlaysView.setVisibility(View.INVISIBLE);
+
+                if (ActivityCompat.shouldShowRequestPermissionRationale(activity, android.Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                    new AlertDialog.Builder(activity, R.style.AppCompatAlertDialogStyle)
+                            .setTitle(R.string.storage_access_rational_title)
+                            .setMessage(R.string.storage_access_rational_message)
+                            .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    ActivityCompat.requestPermissions(activity, new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, ReportCollectionActivity.PERMISSIONS_REQUEST_OVERLAYS);
+                                }
+                            })
+                            .create()
+                            .show();
+
+                } else {
+                    ActivityCompat.requestPermissions(activity, new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, ReportCollectionActivity.PERMISSIONS_REQUEST_OVERLAYS);
+                }
+            }
+        }
+
 	}
-	
+
 	@Override
 	public void onResume() {
 		super.onResume();
 		mapView.onResume();
-
-		refreshMapMarkers();
 	}
 
 	@Override
 	public void onPause () {
+        geoPackageMapOverlays.deselectedReport();
 		super.onPause();
 		mapView.onPause();
 	}
 
 	@Override
 	public void onLowMemory() {
-		super.onLowMemory();
+        super.onLowMemory();
 		mapView.onLowMemory();
         // TODO: clear the offline map and add logic to restore it later
 	}
@@ -136,35 +236,79 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
 
     @Override
     public void onInfoWindowClick(Marker marker) {
+        Report report = getReport(marker);
+        if(report != null) {
+            geoPackageMapOverlays.deselectedReport();
+            Intent detailIntent = new Intent(getActivity(), ReportDetailActivity.class);
+            detailIntent.putExtra("report", report);
+            startActivity(detailIntent);
+        }
+    }
+
+    /**
+     * Get the Report from the marker
+     * @param marker
+     * @return report
+     */
+    private Report getReport(Marker marker) {
         String title = marker.getTitle();
-        Report targetReport = null, currentReport;
+        Report report = null;
         Iterator<Report> cursor = reports.iterator();
-        while (cursor.hasNext() && targetReport == null) {
+        Report currentReport = null;
+        while (cursor.hasNext()) {
             currentReport = cursor.next();
             if (currentReport.getTitle().equalsIgnoreCase(title)) {
-                targetReport = currentReport;
+                report = currentReport;
+                break;
             }
         }
-        Intent detailIntent = new Intent(getActivity(), ReportDetailActivity.class);
-        detailIntent.putExtra("report", targetReport);
-        startActivity(detailIntent);
+        return report;
     }
 
 	@Override
-	public void onMapLongClick(LatLng arg0) {
-		// TODO Auto-generated method stub
+	public void onMapLongClick(LatLng latLng) {
+
 	}
 
 	@Override
-	public boolean onMarkerClick(Marker arg0) {
-		// TODO Auto-generated method stub
-		return false;
+	public boolean onMarkerClick(Marker marker) {
+        boolean consumed = false;
+        String message = geoPackageMapOverlays.mapClickMessage(marker);
+        if(message != null && !message.isEmpty()) {
+            consumed = true;
+            geoPackageMapOverlays.deselectedReport();
+            displayMessage(message);
+        }else{
+            Report report = getReport(marker);
+            if(report != null) {
+                geoPackageMapOverlays.selectedReport(report);
+            }else{
+                geoPackageMapOverlays.deselectedReport();
+            }
+        }
+
+        return consumed;
 	}
 
 	@Override
-	public void onMapClick(LatLng arg0) {
-		// TODO Auto-generated method stub
-	}
+	public void onMapClick(LatLng latLng) {
+        geoPackageMapOverlays.deselectedReport();
+        String message = geoPackageMapOverlays.mapClickMessage(latLng);
+        displayMessage(message);
+    }
+
+    /**
+     * Display a message
+     * @param message message string
+     */
+    private void displayMessage(String message){
+        if(message != null && !message.isEmpty()){
+            new AlertDialog.Builder(getActivity())
+                    .setMessage(message)
+                    .setPositiveButton(android.R.string.yes, null)
+                    .show();
+        }
+    }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
@@ -192,6 +336,8 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
 
         offlineMap = new OfflineMap(map);
         offlineMap.setVisible(true);
+
+        geoPackageMapOverlays = new GeoPackageMapOverlays(getActivity(), mapView, map);
 
         refreshMapMarkers();
     }

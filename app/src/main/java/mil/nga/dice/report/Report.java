@@ -5,6 +5,8 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Report implements Parcelable {
 	private Uri sourceFile;
@@ -19,6 +21,7 @@ public class Report implements Parcelable {
 	private Double lat;
 	private Double lon;
 	private boolean enabled = false;
+	private List<ReportCache> cacheFiles = new ArrayList<>();
 
 
 	public Report() {}
@@ -147,6 +150,14 @@ public class Report implements Parcelable {
 	
 	public void setEnabled (boolean enabled) {
 		this.enabled = enabled;
+	}
+
+	public List<ReportCache> getCacheFiles() {
+		return cacheFiles;
+	}
+
+	public void addReportCache(ReportCache reportCache){
+		cacheFiles.add(reportCache);
 	}
 
 	@Override
