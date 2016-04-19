@@ -6,6 +6,8 @@ package mil.nga.dice;
 public class DICEConstants {
 
     public static final String DICE_REPORT_DIRECTORY = "DICE";
+    public static final String DICE_REPORT_NOTES_DIRECTORY = "notes";
+    public static final String DICE_NO_MEDIA_FILE = ".nomedia";
     public static final String DICE_REPORT_SHARED_DIRECTORY = "shared";
     public static final String DICE_SELECTED_CACHES = "selectedCaches";
     public static final String DICE_ZOOM_TO_REPORTS = "zoomToReports";

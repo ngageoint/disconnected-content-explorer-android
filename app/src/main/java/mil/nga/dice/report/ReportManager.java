@@ -97,6 +97,7 @@ public class ReportManager implements ReportImportCallbacks {
     private ScheduledExecutorService scheduledExecutor;
     private ExecutorService importExecutor;
 	private Handler handler;
+    private boolean directoriesCreated = false;
 
 	public ReportManager(Context context) {
         super();
@@ -134,17 +135,7 @@ public class ReportManager implements ReportImportCallbacks {
         handler = new Handler(Looper.getMainLooper());
 
         reportsDir = ReportUtils.getReportDirectory();
-        if (!reportsDir.exists()) {
-            reportsDir.mkdirs();
-        }
-        if (!reportsDir.isDirectory()) {
-            throw new RuntimeException("content directory is not a directory or could not be created: " + reportsDir);
-        }
-
-        notesDir = new File(reportsDir, "notes");
-        if (!notesDir.exists() && !notesDir.mkdirs()) {
-            throw new RuntimeException("notes directory does not exist and could not be created: " + notesDir);
-        }
+        notesDir = new File(reportsDir, DICEConstants.DICE_REPORT_NOTES_DIRECTORY);
 
 	}
 
@@ -204,6 +195,7 @@ public class ReportManager implements ReportImportCallbacks {
      */
     public void refreshReportsWithPermissions(final Activity activity, boolean granted) {
         if(granted) {
+            createDirectories();
             findExistingReports();
             broadcastUpdateReportList();
         }else{
@@ -225,6 +217,36 @@ public class ReportManager implements ReportImportCallbacks {
             }
         }
         broadcastEndRefresh();
+    }
+
+    /**
+     * Create the report and note directories if needed
+     */
+    private void createDirectories(){
+
+        if(!directoriesCreated) {
+
+            if (!reportsDir.exists()) {
+                reportsDir.mkdirs();
+            }
+            if (!reportsDir.isDirectory()) {
+                throw new RuntimeException("content directory is not a directory or could not be created: " + reportsDir);
+            }
+            File noMedia = new File(reportsDir, DICEConstants.DICE_NO_MEDIA_FILE);
+            if (!noMedia.exists()) {
+                try {
+                    noMedia.createNewFile();
+                } catch (IOException e) {
+                    Log.i(TAG, "Failed to create no media file: " + noMedia.getAbsolutePath(), e);
+                }
+            }
+
+            if (!notesDir.exists() && !notesDir.mkdirs()) {
+                throw new RuntimeException("notes directory does not exist and could not be created: " + notesDir);
+            }
+
+            directoriesCreated = true;
+        }
     }
 
     public Report getReportWithId(String id) {
