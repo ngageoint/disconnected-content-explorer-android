@@ -157,14 +157,16 @@ public class ReportMapFragment extends android.support.v4.app.Fragment implement
         // Zoom to the reports
         if(zoomBounds != null){
             View view = getView();
-            int minViewLength = Math.min(view.getWidth(), view.getHeight());
-            final int padding = (int) Math.floor(minViewLength * 0.1);
-            try {
-                map.animateCamera(CameraUpdateFactory.newLatLngBounds(
-                        zoomBounds.build(), padding));
-            } catch (Exception e) {
-                Log.w(ReportMapFragment.class.getSimpleName(),
-                        "Unable to move camera", e);
+            if(view != null) {
+                int minViewLength = Math.min(view.getWidth(), view.getHeight());
+                final int padding = (int) Math.floor(minViewLength * 0.1);
+                try {
+                    map.animateCamera(CameraUpdateFactory.newLatLngBounds(
+                            zoomBounds.build(), padding));
+                } catch (Exception e) {
+                    Log.w(ReportMapFragment.class.getSimpleName(),
+                            "Unable to move camera", e);
+                }
             }
         }
 

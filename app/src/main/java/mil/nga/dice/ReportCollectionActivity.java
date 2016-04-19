@@ -275,6 +275,7 @@ implements ReportCollectionCallbacks, DisclaimerDialogFragment.OnDisclaimerDialo
             // If a GeoPackage file
             if(geoPackageCache.hasGeoPackageExtension(name)){
                 geoPackageCache.importFile(name, uri, path);
+                showMapView();
             }else{
                 // Attempt to import a report
                 ReportManager.getInstance().importReportFromUri(uri);

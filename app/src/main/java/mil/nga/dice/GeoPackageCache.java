@@ -21,6 +21,7 @@ import java.io.InputStream;
 
 import mil.nga.dice.io.DICEFileUtils;
 import mil.nga.dice.map.geopackage.GeoPackageSelected;
+import mil.nga.dice.report.ReportManager;
 import mil.nga.geopackage.GeoPackageManager;
 import mil.nga.geopackage.factory.GeoPackageFactory;
 import mil.nga.geopackage.io.GeoPackageIOUtils;
@@ -180,6 +181,11 @@ public class GeoPackageCache {
      */
     private void importGeoPackage(final String name, Uri uri, String path) {
 
+        if(manager.exists(name)){
+            manager.delete(name);
+            selected.removeSelected(name);
+        }
+
         ImportTask importTask = new ImportTask(name, path, uri);
         progressDialog = createImportProgressDialog(name,
                 importTask, path, uri, null);
@@ -317,6 +323,7 @@ public class GeoPackageCache {
                                 + (path != null ? path : uri.getPath()));
             }else{
                 selected.addSelected(database);
+                ReportManager.getInstance().refreshReports(activity);
             }
         }
 

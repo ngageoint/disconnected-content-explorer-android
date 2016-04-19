@@ -95,4 +95,19 @@ public class GeoPackageSelected {
         editor.commit();
     }
 
+    /**
+     * Remove selected cache
+     *
+     * @param cache
+     */
+    public void removeSelected(String cache) {
+
+        Map<String, Set<String>> selected = getSelectedMap();
+
+        if(selected.containsKey(cache)){
+            selected.remove(cache);
+            updateSelected(selected);
+        }
+    }
+
 }
