@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
 
+def googleMapsApiReleaseKey = hasProperty('RELEASE_MAPS_DICE_API_KEY') ? RELEASE_MAPS_DICE_API_KEY: ''
 def googleMapsApiKeyDebug = hasProperty('DEBUG_MAPS_API_KEY') ? DEBUG_MAPS_API_KEY: ''
 
 project.ext {
@@ -38,7 +39,7 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
             signingConfig signingConfigs.release
-            resValue "string", "GOOGLE_MAPS_ANDROID_API_KEY", "AIzaSyB5b4IowHnB6P_jyl6f0Y1rbfl9DLMaEY4"
+            resValue "string", "GOOGLE_MAPS_ANDROID_API_KEY", googleMapsApiReleaseKey
         }
         debug {
             minifyEnabled false
