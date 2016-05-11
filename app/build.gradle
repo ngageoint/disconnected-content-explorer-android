@@ -75,7 +75,7 @@ dependencies {
     compile 'com.android.support:recyclerview-v7:23.2.1'
     compile 'com.vividsolutions:jts:1.13'
     compile 'com.fasterxml.jackson.core:jackson-databind:2.5.1'
-    compile "mil.nga.geopackage:geopackage-android:1.2.8"
+    compile "mil.nga.geopackage:geopackage-android:1.2.9"
 
     androidTestCompile 'org.hamcrest:hamcrest-core:1.3'
 }
