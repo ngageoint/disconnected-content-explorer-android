@@ -19,6 +19,9 @@
     <string name="disclaimer_title_text">Disclaimer</string>
     <string name="disclaimer_exit_button_text">Exit</string>
     <string name="disclaimer_agree_button_text">I Agree</string>
+    <string name="downaload_dialog_title">Download?</string>
+    <string name="download_dialog_confirm">Yes</string>
+    <string name="download_dialog_cancel">No</string>
     <string name="import_error_unsupported">Unsupported content type</string>
     <string name="no_viewer_for_report">No app to view content</string>
     <string name="note_saved">Note saved</string>

@@ -30,6 +30,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -310,6 +311,7 @@ public class ReportManager implements ReportImportCallbacks {
     // TODO: do something with this
     public void deleteReport(Report report) {
         renameThenDeleteInBackground(report.getPath());
+        broadcastUpdateReportList();
     }
 
     @Override
@@ -338,6 +340,24 @@ public class ReportManager implements ReportImportCallbacks {
         broadcastUpdateReportList();
     }
 
+    @Override
+    public void downloadProgressPercentage(Report report, int value) {
+        report.setDescription("Download " + value + " % complete");
+        broadcastUpdateReportList();
+    }
+
+    @Override
+    public void downloadComplete(Report report, Activity activity, Uri reportZipPath) {
+        reports.remove(report);
+        importReportFromUri(reportZipPath);
+        broadcastUpdateReportList();
+    }
+
+    @Override
+    public void downloadError(Report report, String errorMessage) {
+        // TODO: add code
+    }
+
     private Drawable loadExternalLaunchIcon() {
         int color = context.getResources().getColor(R.color.colorPrimaryDark);
         int red = (color & 0x00ff0000) >> 16;
@@ -352,6 +372,17 @@ public class ReportManager implements ReportImportCallbacks {
         Drawable drawable = context.getResources().getDrawable(R.drawable.ic_launch);
         drawable.setColorFilter(filter);
         return drawable;
+    }
+
+    public void downloadReport(URL reportURL, Activity activity) {
+        Report report = new Report();
+        report.setTitle(reportURL.toString());
+        report.setDescription("Downloading...");
+        reports.add(report);
+
+        DownloadReportTask downloadReportTask = new DownloadReportTask(report, activity, this);
+        downloadReportTask.execute(reportURL.toString());
+        broadcastUpdateReportList();
     }
 
     private Drawable loadThumbnailMissingIcon() {
@@ -807,5 +838,7 @@ public class ReportManager implements ReportImportCallbacks {
             }
         }
     }
+
+
 
 }

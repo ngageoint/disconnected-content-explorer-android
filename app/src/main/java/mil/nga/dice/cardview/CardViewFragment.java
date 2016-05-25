@@ -1,7 +1,10 @@
 package mil.nga.dice.cardview;
 
 import android.content.BroadcastReceiver;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.AsyncTask;
@@ -10,13 +13,22 @@ import android.os.Handler;
 import android.os.Looper;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.List;
+import java.util.Map;
+import java.util.prefs.Preferences;
 
 import mil.nga.dice.R;
 import mil.nga.dice.ReportCollectionCallbacks;
@@ -28,6 +40,9 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
     private RecyclerView.Adapter mAdapter;
     private RecyclerView.LayoutManager mLayoutManager;
     private SwipeRefreshLayout swipeRefresh;
+    private String mClipText = "";
+    private Preferences mPreferences = Preferences.userRoot();
+    private final String previousURLKey = "DICE.previousURLKey";
 
     @Override
     public void onCreate(Bundle savedInstance) {
@@ -61,6 +76,12 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        checkClipboard();
+    }
+
+    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         final View v = inflater.inflate(R.layout.fragment_report_recycler, container, false);
         mRecyclerView = (RecyclerView) v.findViewById(R.id.report_recycler);
@@ -83,6 +104,8 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
         }
         mRecyclerView.setLayoutManager(mLayoutManager);
         mRecyclerView.setAdapter(mAdapter);
+        initItemTouchHelper();
+
         ReportManager.getInstance().refreshReports(getActivity());
         return v;
     }
@@ -90,5 +113,137 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
     @Override
     public void onRefresh() {
         ReportManager.getInstance().refreshReports(getActivity());
+    }
+
+
+    private void checkClipboard() {
+        ClipboardManager clipboardManager = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = clipboardManager.getPrimaryClip();
+
+        if (clip != null) {
+            try {
+                mClipText = (String) clip.getItemAt(0).getText();
+
+                String previousURL = mPreferences.get(previousURLKey, "DICE.NoClipText");
+                if (!previousURL.equals(mClipText)) {
+                    ClipboardURLCheckTask urlCheckTask = new ClipboardURLCheckTask();
+                    urlCheckTask.execute(mClipText);
+                }
+            } catch (Exception e) {
+                Log.e("CardViewFragment", e.getLocalizedMessage());
+            }
+        }
+    }
+
+
+    private void initItemTouchHelper() {
+        Log.d("CardViewFragment", "Initializeing touch helper.");
+
+        ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+
+            @Override
+            public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+                return false;
+            }
+
+
+            @Override
+            public int getSwipeDirs(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
+                int position = viewHolder.getAdapterPosition();
+                CardAdapter adapter = (CardAdapter)recyclerView.getAdapter();
+
+                /*if (adapter.isPendingRemoval(position)) {
+
+                }*/
+
+                return super.getSwipeDirs(recyclerView, viewHolder);
+            }
+
+
+            @Override
+            public void onSwiped(RecyclerView.ViewHolder viewHolder, int swipeDir) {
+                Log.d("CardViewFragment","Swipe detected");
+                int swipedPosition = viewHolder.getAdapterPosition();
+                CardAdapter adapter = (CardAdapter)mRecyclerView.getAdapter();
+
+                adapter.remove(swipedPosition);
+            }
+        };
+
+        ItemTouchHelper mItemTouchHelper = new ItemTouchHelper(simpleItemTouchCallback);
+        mItemTouchHelper.attachToRecyclerView(mRecyclerView);
+    }
+
+
+    /**
+     * Check and see if the user has a URL in their clipboard. If they do, is it
+     * something that DICE can consume? If so, lets offer to download it for them.
+     */
+    private class ClipboardURLCheckTask extends AsyncTask<String, String, String> {
+
+        URL mUrl;
+        boolean mIsReport = false;
+
+        @Override
+        protected void onPreExecute() {
+
+        }
+
+        @Override
+        protected String doInBackground(String ...uri) {
+            String responseString = null;
+
+            try{
+                mUrl = new URL(uri[0]);
+                HttpURLConnection urlConnection = (HttpURLConnection) mUrl.openConnection();
+                urlConnection.setRequestMethod("HEAD");
+                urlConnection.connect();
+                responseString = urlConnection.getResponseMessage();
+
+                for (Map.Entry<String, List<String>> k : urlConnection.getHeaderFields().entrySet()) {
+                    Log.d("ClipboardURLCheckTask", k.toString());
+                }
+
+                String contentType = urlConnection.getHeaderField("Content-Type");
+                String mimeType = urlConnection.getHeaderField("MIMEType");
+
+                if (mimeType != null && mimeType.equals("application/zip") || contentType != null && (contentType.equals("application/zip") || contentType.equals("application/octet-stream"))) {
+                    Log.d("ClipboardURLCheckTask", "URL Looks good");
+                    mIsReport = true;
+                }
+
+            } catch (Exception e) {
+                Log.e("ClipboardURLCheckTask", e.getLocalizedMessage());
+            }
+
+            return responseString;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            if (mIsReport) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+                builder.setTitle(R.string.downaload_dialog_title);
+                builder.setMessage(mUrl.toString());
+
+                builder.setPositiveButton(R.string.download_dialog_confirm, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        ReportManager.getInstance().downloadReport(mUrl, getActivity());
+                    }
+                });
+
+                builder.setNegativeButton(R.string.download_dialog_cancel, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        // TODO: close the dialog
+                    }
+                });
+
+                mPreferences.put(previousURLKey, mUrl.toString());
+                AlertDialog dialog = builder.create();
+                dialog.show();
+            }
+        }
     }
 }

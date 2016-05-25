@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -67,6 +68,13 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
         else {
             holder.mNoteButton.setVisibility(View.INVISIBLE);
         }
+    }
+
+    public void remove(int position) {
+        Log.d("CardAdapter", "Removing card for position: " + position);
+
+        Report report = this.reports.get(position);
+        ReportManager.getInstance().deleteReport(report);
     }
 
 
