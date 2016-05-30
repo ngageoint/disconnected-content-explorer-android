@@ -7,10 +7,16 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AlertDialog;
@@ -141,6 +147,19 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
 
         ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
 
+            Drawable background;
+            Drawable xIcon;
+            int xIconMargin;
+            boolean isSetup = false;
+
+            private void init() {
+                background = new ColorDrawable(Color.RED);
+                xIcon = ContextCompat.getDrawable(getActivity(), R.drawable.x_icon);
+                xIcon.setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_ATOP);
+                xIconMargin = (int) getActivity().getResources().getDimension(R.dimen.x_icon_margin);
+                isSetup = true;
+            }
+
             @Override
             public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
                 return false;
@@ -152,11 +171,9 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
                 int position = viewHolder.getAdapterPosition();
                 CardAdapter adapter = (CardAdapter)recyclerView.getAdapter();
 
-                /*if (adapter.isPendingRemoval(position)) {
+                int swipeFlags = ItemTouchHelper.LEFT;
 
-                }*/
-
-                return super.getSwipeDirs(recyclerView, viewHolder);
+                return swipeFlags;
             }
 
 
@@ -167,6 +184,37 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
                 CardAdapter adapter = (CardAdapter)mRecyclerView.getAdapter();
 
                 adapter.remove(swipedPosition);
+                ReportManager.getInstance().refreshReports(getActivity());
+            }
+
+
+            @Override
+            public void onChildDraw(Canvas canvas, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
+                View itemView = viewHolder.itemView;
+
+                if (viewHolder.getAdapterPosition() == -1) {
+                    return;
+                }
+
+                if (!isSetup) {
+                    init();
+                }
+
+                background.setBounds(itemView.getRight() + (int)dX, itemView.getTop(), itemView.getRight(), itemView.getBottom());
+                background.draw(canvas);
+
+                int itemHeight = itemView.getBottom() - itemView.getTop();
+                int intrinsicWidth = xIcon.getIntrinsicWidth();
+                int intrinsicHeight = xIcon.getIntrinsicHeight();
+
+                int xIconLeft = itemView.getRight() - xIconMargin - intrinsicWidth;
+                int xIconRight = itemView.getRight() - xIconMargin;
+                int xIconTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
+                int xIconBottom = xIconTop + intrinsicHeight;
+
+                xIcon.setBounds(xIconLeft, xIconTop, xIconRight, xIconBottom);
+                xIcon.draw(canvas);
+                super.onChildDraw(canvas, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
             }
         };
 
