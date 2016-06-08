@@ -45,5 +45,7 @@
     <string name="location_access_rational_message">DICE allows you to view your current location</string>
     <string name="location_access_denied_title"><font color='#DD000000'>Location Permission Denied</font></string>
     <string name="location_access_denied_message"><font color='#DD000000'>DICE</font> has been denied access to location services. Please enable to view your location.</string>
+    <string name="previous_url_key">DICE.previousURLKey</string>
+    <string name="default_clipboard_value">"DICE.NoClipText"</string>
 
 </resources>

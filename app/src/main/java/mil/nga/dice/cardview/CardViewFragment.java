@@ -1,5 +1,6 @@
 package mil.nga.dice.cardview;
 
+import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -7,6 +8,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
@@ -16,6 +18,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.preference.PreferenceManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.widget.SwipeRefreshLayout;
@@ -47,8 +50,7 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
     private RecyclerView.LayoutManager mLayoutManager;
     private SwipeRefreshLayout swipeRefresh;
     private String mClipText = "";
-    private Preferences mPreferences = Preferences.userRoot();
-    private final String previousURLKey = "DICE.previousURLKey";
+    private SharedPreferences mPreferences;
 
     @Override
     public void onCreate(Bundle savedInstance) {
@@ -79,12 +81,19 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
                 swipeRefresh.setRefreshing(false);
             }
         }, new IntentFilter(ReportManager.INTENT_END_REFRESH_REPORT_LIST));
+
+        mPreferences = getActivity().getSharedPreferences("mil.nga.dice", Context.MODE_PRIVATE);
     }
 
     @Override
     public void onResume() {
         super.onResume();
         checkClipboard();
+    }
+
+    @Override
+    public void onAttach(Activity activity) {
+        super.onAttach(activity);
     }
 
     @Override
@@ -130,7 +139,7 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
             try {
                 mClipText = (String) clip.getItemAt(0).getText();
 
-                String previousURL = mPreferences.get(previousURLKey, "DICE.NoClipText");
+                String previousURL = mPreferences.getString(getString(R.string.previous_url_key), getString(R.string.default_clipboard_value));
                 if (!previousURL.equals(mClipText)) {
                     ClipboardURLCheckTask urlCheckTask = new ClipboardURLCheckTask();
                     urlCheckTask.execute(mClipText);
@@ -148,15 +157,15 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
         ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
 
             Drawable background;
-            Drawable xIcon;
-            int xIconMargin;
+            Drawable deleteIcon;
+            int deleteIconMargin;
             boolean isSetup = false;
 
             private void init() {
                 background = new ColorDrawable(Color.RED);
-                xIcon = ContextCompat.getDrawable(getActivity(), R.drawable.x_icon);
-                xIcon.setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_ATOP);
-                xIconMargin = (int) getActivity().getResources().getDimension(R.dimen.x_icon_margin);
+                deleteIcon = ContextCompat.getDrawable(getActivity(), R.drawable.ic_delete_forever_black_24dp);
+                deleteIcon.setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_ATOP);
+                deleteIconMargin = (int) getActivity().getResources().getDimension(R.dimen.x_icon_margin);
                 isSetup = true;
             }
 
@@ -204,16 +213,16 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
                 background.draw(canvas);
 
                 int itemHeight = itemView.getBottom() - itemView.getTop();
-                int intrinsicWidth = xIcon.getIntrinsicWidth();
-                int intrinsicHeight = xIcon.getIntrinsicHeight();
+                int intrinsicWidth = deleteIcon.getIntrinsicWidth();
+                int intrinsicHeight = deleteIcon.getIntrinsicHeight();
 
-                int xIconLeft = itemView.getRight() - xIconMargin - intrinsicWidth;
-                int xIconRight = itemView.getRight() - xIconMargin;
-                int xIconTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
-                int xIconBottom = xIconTop + intrinsicHeight;
+                int deleteIconLeft = itemView.getRight() - deleteIconMargin - intrinsicWidth;
+                int deleteIconRight = itemView.getRight() - deleteIconMargin;
+                int deleteIconTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
+                int deleteIconBottom = deleteIconTop + intrinsicHeight;
 
-                xIcon.setBounds(xIconLeft, xIconTop, xIconRight, xIconBottom);
-                xIcon.draw(canvas);
+                deleteIcon.setBounds(deleteIconLeft, deleteIconTop, deleteIconRight, deleteIconBottom);
+                deleteIcon.draw(canvas);
                 super.onChildDraw(canvas, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
             }
         };
@@ -288,7 +297,10 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
                     }
                 });
 
-                mPreferences.put(previousURLKey, mUrl.toString());
+                SharedPreferences.Editor editor = mPreferences.edit();
+                editor.putString(getString(R.string.previous_url_key), mUrl.toString());
+                editor.commit();
+
                 AlertDialog dialog = builder.create();
                 dialog.show();
             }
