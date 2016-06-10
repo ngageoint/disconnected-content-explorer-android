@@ -1,7 +1,9 @@
 package mil.nga.dice.cardview;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.support.v7.widget.RecyclerView;
@@ -13,7 +15,9 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.prefs.Preferences;
 
 import mil.nga.dice.R;
 import mil.nga.dice.ReportCollectionCallbacks;
@@ -25,13 +29,16 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
 
     private final Context context;
     private final List<Report> reports;
+    private List<Report> swipedReports;
     private final ReportCollectionCallbacks callbacks;
     private final LayoutInflater inflater;
+    private Activity activityToUpdate;
 
     public CardAdapter(Context context, List<Report> reports, ReportCollectionCallbacks callbacks) {
         this.reports = reports;
         this.context = context;
         this.callbacks = callbacks;
+        this.swipedReports = new ArrayList<>();
         inflater = (LayoutInflater) this.context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     }
 
@@ -54,6 +61,25 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
     public void onBindViewHolder(ViewHolder holder, int position) {
         Report report = reports.get(position);
 
+        if (this.swipedReports.contains(report)) {
+            holder.mDeleteButton.setVisibility(View.VISIBLE);
+            holder.mCancelButton.setVisibility(View.VISIBLE);
+            holder.mTitleTextView.setVisibility(View.INVISIBLE);
+            holder.mDescriptionTextView.setVisibility(View.INVISIBLE);
+            holder.mNoteButton.setVisibility(View.INVISIBLE);
+            holder.mThumbnailImageView.setVisibility(View.INVISIBLE);
+            holder.itemView.setBackgroundColor(Color.RED);
+
+        } else {
+            holder.itemView.setBackgroundColor(Color.WHITE);
+            holder.mDeleteButton.setVisibility(View.GONE);
+            holder.mCancelButton.setVisibility(View.GONE);
+            holder.mTitleTextView.setVisibility(View.VISIBLE);
+            holder.mDescriptionTextView.setVisibility(View.VISIBLE);
+            holder.mNoteButton.setVisibility(View.VISIBLE);
+            holder.mThumbnailImageView.setVisibility(View.VISIBLE);
+        }
+
         holder.mReport = report;
         holder.mTitleTextView.setText(report.getTitle());
         holder.mDescriptionTextView.setText(report.getDescription());
@@ -70,11 +96,10 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
         }
     }
 
-    public void remove(int position) {
-        Log.d("CardAdapter", "Removing card for position: " + position);
-
-        Report report = this.reports.get(position);
-        ReportManager.getInstance().deleteReport(report);
+    public void swiped(int swipedPosition, Activity activity) {
+        this.swipedReports.add(reports.get(swipedPosition));
+        notifyItemChanged(swipedPosition);
+        activityToUpdate = activity;
     }
 
 
@@ -84,6 +109,8 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
         private TextView mTitleTextView;
         private TextView mDescriptionTextView;
         private Button mNoteButton;
+        private Button mDeleteButton;
+        private Button mCancelButton;
 
         public ViewHolder(View v) {
             super(v);
@@ -99,6 +126,24 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.ViewHolder> {
                     context.startActivity(noteIntent);
                 }
             });
+
+            mDeleteButton = (Button) v.findViewById(R.id.delete_report_button);
+            mDeleteButton.setOnClickListener(new View.OnClickListener() {
+               public void onClick(View view) {
+                   ReportManager.getInstance().deleteReport(mReport);
+                   ReportManager.getInstance().refreshReports(activityToUpdate);
+               }
+            });
+
+            mCancelButton = (Button) v.findViewById(R.id.cancel_delete_button);
+            mCancelButton.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View view) {
+                    // let the card go back to how it was
+                    swipedReports.remove(mReport);
+                    notifyItemChanged(reports.indexOf(mReport));
+                }
+            });
+
             v.setOnClickListener(this);
         }
 

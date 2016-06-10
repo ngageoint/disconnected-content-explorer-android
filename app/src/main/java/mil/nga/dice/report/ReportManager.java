@@ -379,6 +379,7 @@ public class ReportManager implements ReportImportCallbacks {
         Report report = new Report();
         report.setTitle(reportURL.toString());
         report.setDescription("Downloading...");
+        report.setEnabled(false);
         reports.add(report);
 
         DownloadReportTask downloadReportTask = new DownloadReportTask(report, activity, this);
