@@ -182,10 +182,14 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
                 int position = viewHolder.getAdapterPosition();
                 CardAdapter adapter = (CardAdapter)recyclerView.getAdapter();
 
-                // disable the swipe action for the default placeholder report.
-                Report report = ReportManager.getInstance().getReports().get(position);
-                if( !report.isEnabled() || (report.getId() != null && report.getId().equals(ReportManager.USER_GUIDE_REPORT_ID))) {
-                    return 0;
+                try {
+                    // disable the swipe action for the default placeholder report.
+                    Report report = ReportManager.getInstance().getReports().get(position);
+                    if( !report.isEnabled() || (report.getId() != null && report.getId().equals(ReportManager.USER_GUIDE_REPORT_ID))) {
+                        return ItemTouchHelper.ACTION_STATE_IDLE;
+                    }
+                } catch(ArrayIndexOutOfBoundsException e) {
+                    return ItemTouchHelper.ACTION_STATE_IDLE;
                 }
 
                 int swipeFlags = ItemTouchHelper.LEFT;
