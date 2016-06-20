@@ -107,6 +107,12 @@ public class JavaScriptAPI implements ConnectionCallbacks, OnConnectionFailedLis
                 fOut.flush();
                 fOut.close();
                 jsCallback.callback("{\"success\":true,\"message\":\"Exported your data to the DICE folder on your SD card.\"}");
+
+                Intent emailIntent = new Intent(Intent.ACTION_SEND);
+                emailIntent.setType("text/plain");
+                emailIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, mReport.getTitle() + " export");
+                emailIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(export));
+                mActivity.startActivity(Intent.createChooser(emailIntent, "Email your export"));
             } catch (IOException e) {
                 e.printStackTrace();
                 jsCallback.callback("{\"success\":false,\"message\":\"There was a problem exporting your data, please try again.\"}");
