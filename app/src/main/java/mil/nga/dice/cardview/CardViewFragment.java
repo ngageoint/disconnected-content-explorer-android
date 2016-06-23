@@ -15,6 +15,7 @@ import android.graphics.PorterDuff;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -220,20 +221,27 @@ public class CardViewFragment extends android.support.v4.app.Fragment implements
                     init();
                 }
 
-                background.setBounds(itemView.getRight() + (int)dX, itemView.getTop(), itemView.getRight(), itemView.getBottom());
-                background.draw(canvas);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    background.setBounds(itemView.getRight() + (int)dX, itemView.getTop(), itemView.getRight(), itemView.getBottom());
+                    background.draw(canvas);
 
-                int itemHeight = itemView.getBottom() - itemView.getTop();
-                int intrinsicWidth = deleteIcon.getIntrinsicWidth();
-                int intrinsicHeight = deleteIcon.getIntrinsicHeight();
+                    int itemHeight = itemView.getBottom() - itemView.getTop();
+                    int intrinsicWidth = deleteIcon.getIntrinsicWidth();
+                    int intrinsicHeight = deleteIcon.getIntrinsicHeight();
 
-                int deleteIconLeft = itemView.getRight() - deleteIconMargin - intrinsicWidth;
-                int deleteIconRight = itemView.getRight() - deleteIconMargin;
-                int deleteIconTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
-                int deleteIconBottom = deleteIconTop + intrinsicHeight;
+                    int deleteIconLeft = itemView.getRight() - deleteIconMargin - intrinsicWidth;
+                    int deleteIconRight = itemView.getRight() - deleteIconMargin;
+                    int deleteIconTop = itemView.getTop() + (itemHeight - intrinsicHeight)/2;
+                    int deleteIconBottom = deleteIconTop + intrinsicHeight;
 
-                deleteIcon.setBounds(deleteIconLeft, deleteIconTop, deleteIconRight, deleteIconBottom);
-                deleteIcon.draw(canvas);
+                    deleteIcon.setBounds(deleteIconLeft, deleteIconTop, deleteIconRight, deleteIconBottom);
+                    deleteIcon.draw(canvas);
+                } else {
+                    //viewHolder.itemView.setBackgroundColor(ContextCompat.getColor(getContext(), R.color.colorPrimary));
+                    Drawable d = viewHolder.itemView.getBackground();
+                    d.setColorFilter(ContextCompat.getColor(getContext(), R.color.colorPrimary), PorterDuff.Mode.MULTIPLY);
+                }
+
                 super.onChildDraw(canvas, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
             }
         };
