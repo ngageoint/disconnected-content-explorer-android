@@ -1,20 +1,21 @@
 package com.fangjian;
+
 import android.app.Activity;
-import android.content.Context;
-import android.os.Build;
 import android.util.Log;
-import android.webkit.*;
+import android.webkit.ConsoleMessage;
+import android.webkit.JavascriptInterface;
+import android.webkit.JsResult;
+import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Toast;
+
 import org.json.JSONObject;
 
-import mil.nga.dice.R;
-
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Scanner;
 
 /**
  * Created with IntelliJ IDEA.
@@ -32,7 +33,7 @@ public class WebViewJavascriptBridge implements Serializable {
     Map<String,WVJBResponseCallback> _responseCallbacks;
     long _uniqueId;
 
-    public WebViewJavascriptBridge(Activity context,WebView webview,WVJBHandler handler) {
+    public WebViewJavascriptBridge(Activity context,WebView webview,WVJBHandler handler, WebViewClient webViewClient) {
         this.mContext=context;
         this.mWebView=webview;
         this._messageHandler=handler;
@@ -45,35 +46,8 @@ public class WebViewJavascriptBridge implements Serializable {
             mWebView.setWebContentsDebuggingEnabled(true);
         }*/
         mWebView.addJavascriptInterface(this, "_WebViewJavascriptBridge");
-        mWebView.setWebViewClient(new MyWebViewClient());
+        mWebView.setWebViewClient(webViewClient);
         mWebView.setWebChromeClient(new MyWebChromeClient());     //optional, for show console and alert
-    }
-
-
-    private void loadWebViewJavascriptBridgeJs(WebView webView) {
-        InputStream is=mContext.getResources().openRawResource(R.raw.webviewjavascriptbridge);
-        String script=convertStreamToString(is);
-        webView.loadUrl("javascript:"+script);
-    }
-
-    public static String convertStreamToString(java.io.InputStream is) {
-        String s="";
-        try{
-            Scanner scanner = new Scanner(is, "UTF-8").useDelimiter("\\A");
-            if (scanner.hasNext()) s= scanner.next();
-            is.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return s;
-    }
-
-    private class MyWebViewClient extends WebViewClient {
-        @Override
-        public void onPageFinished(WebView webView, String url) {
-            Log.d("JSBridge", "onPageFinished");
-            loadWebViewJavascriptBridgeJs(webView);
-        }
     }
 
     private class MyWebChromeClient extends WebChromeClient {

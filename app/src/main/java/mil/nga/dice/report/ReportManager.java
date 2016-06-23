@@ -1,36 +1,42 @@
 package mil.nga.dice.report;
 
+import android.Manifest;
+import android.app.Activity;
+import android.app.Dialog;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
 import android.provider.OpenableColumns;
+import android.provider.Settings;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
 
 import java.io.File;
 import java.io.FileDescriptor;
-import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -39,7 +45,12 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import mil.nga.dice.DICEConstants;
 import mil.nga.dice.R;
+import mil.nga.dice.ReportCollectionActivity;
+import mil.nga.geopackage.GeoPackageConstants;
+import mil.nga.geopackage.GeoPackageManager;
+import mil.nga.geopackage.factory.GeoPackageFactory;
 
 /**
  * TODO: modify to look for content roots in report dir instead of tying to source file
@@ -52,27 +63,10 @@ public class ReportManager implements ReportImportCallbacks {
 
     private static final String TAG = ReportManager.class.getSimpleName();
 
-    private static final String DELETE_FILE_PREFIX = ".deleting.";
-
     private static final long STABILITY_CHECK_INTERVAL = 250;
     private static final int MIN_STABILITY_CHECKS = 2;
 
     private Report userGuideReport = new Report();
-
-    private static final Set<String> supportedReportFileTypes;
-    static {
-        Set<String> types = new TreeSet<>(Arrays.asList(new String[] {
-                "zip", "application/zip",
-                "pdf", "application/pdf",
-                "doc",
-                "docx",
-                "xls",
-                "xlsx",
-                "ppt",
-                "pptx"
-        }));
-        supportedReportFileTypes = Collections.unmodifiableSet(types);
-    }
 
     public static synchronized ReportManager initialize(Context context) {
         return instance = new ReportManager(context);
@@ -105,6 +99,7 @@ public class ReportManager implements ReportImportCallbacks {
     private ScheduledExecutorService scheduledExecutor;
     private ExecutorService importExecutor;
 	private Handler handler;
+    private boolean directoriesCreated = false;
 
 	public ReportManager(Context context) {
         super();
@@ -141,20 +136,9 @@ public class ReportManager implements ReportImportCallbacks {
 
         handler = new Handler(Looper.getMainLooper());
 
-        reportsDir = new File(Environment.getExternalStorageDirectory(), "DICE");
-        if (!reportsDir.exists()) {
-            reportsDir.mkdirs();
-        }
-        if (!reportsDir.isDirectory()) {
-            throw new RuntimeException("content directory is not a directory or could not be created: " + reportsDir);
-        }
+        reportsDir = ReportUtils.getReportDirectory();
+        notesDir = new File(reportsDir, DICEConstants.DICE_REPORT_NOTES_DIRECTORY);
 
-        notesDir = new File(reportsDir, "notes");
-        if (!notesDir.exists() && !notesDir.mkdirs()) {
-            throw new RuntimeException("notes directory does not exist and could not be created: " + notesDir);
-        }
-
-        refreshReports();
 	}
 
     public void destroy() {
@@ -176,11 +160,95 @@ public class ReportManager implements ReportImportCallbacks {
         return reportsView;
     }
 
-    public void refreshReports() {
+    public void refreshReports(final Activity activity) {
         removeDeletedAndErrorReports();
-        findExistingReports();
-        broadcastUpdateReportList();
+
+        // If we have external storage permission, refresh the reports
+        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+            refreshReportsWithPermissions(activity, true);
+        } else {
+            // Should we justify why we need permission?
+            if (ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                new AlertDialog.Builder(activity, R.style.AppCompatAlertDialogStyle)
+                        .setTitle(R.string.storage_access_rational_title)
+                        .setMessage(R.string.storage_access_rational_message)
+                        .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                // Request permission
+                                ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, ReportCollectionActivity.PERMISSIONS_REQUEST_REPORTS_ACCESS);
+                            }
+                        })
+                        .create()
+                        .show();
+
+            } else {
+                // Request permission
+                ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, ReportCollectionActivity.PERMISSIONS_REQUEST_REPORTS_ACCESS);
+            }
+        }
+
+    }
+
+    /**
+     * Refresh the reports after attempting to obtain external storage permission
+     *
+     * @param granted true if granted, false if denied
+     */
+    public void refreshReportsWithPermissions(final Activity activity, boolean granted) {
+        if(granted) {
+            createDirectories();
+            findExistingReports();
+            broadcastUpdateReportList();
+        }else{
+            // If the user has declared to no longer get asked about permissions
+            if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                new AlertDialog.Builder(activity, R.style.AppCompatAlertDialogStyle)
+                        .setTitle(context.getResources().getString(R.string.storage_access_denied_title))
+                        .setMessage(context.getResources().getString(R.string.storage_access_denied_message))
+                        .setPositiveButton(R.string.settings, new Dialog.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                                intent.setData(Uri.fromParts("package", activity.getPackageName(), null));
+                                activity.startActivityForResult(intent, ReportCollectionActivity.ACTIVITY_APP_SETTINGS);
+                            }
+                        })
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+            }
+        }
         broadcastEndRefresh();
+    }
+
+    /**
+     * Create the report and note directories if needed
+     */
+    private void createDirectories(){
+
+        if(!directoriesCreated) {
+
+            if (!reportsDir.exists()) {
+                reportsDir.mkdirs();
+            }
+            if (!reportsDir.isDirectory()) {
+                throw new RuntimeException("content directory is not a directory or could not be created: " + reportsDir);
+            }
+            File noMedia = new File(reportsDir, DICEConstants.DICE_NO_MEDIA_FILE);
+            if (!noMedia.exists()) {
+                try {
+                    noMedia.createNewFile();
+                } catch (IOException e) {
+                    Log.i(TAG, "Failed to create no media file: " + noMedia.getAbsolutePath(), e);
+                }
+            }
+
+            if (!notesDir.exists() && !notesDir.mkdirs()) {
+                throw new RuntimeException("notes directory does not exist and could not be created: " + notesDir);
+            }
+
+            directoriesCreated = true;
+        }
     }
 
     public Report getReportWithId(String id) {
@@ -228,7 +296,7 @@ public class ReportManager implements ReportImportCallbacks {
      * @param reportUri
      */
 	public void importReportFromUri(Uri reportUri) {
-        if (!uriCouldBeReport(reportUri)) {
+        if (!ReportUtils.uriCouldBeReport(context, reportUri)) {
             return;
         }
 
@@ -244,6 +312,7 @@ public class ReportManager implements ReportImportCallbacks {
     // TODO: do something with this
     public void deleteReport(Report report) {
         renameThenDeleteInBackground(report.getPath());
+        broadcastUpdateReportList();
     }
 
     @Override
@@ -255,6 +324,7 @@ public class ReportManager implements ReportImportCallbacks {
     @Override
     public void importComplete(Report report) {
         ReportDescriptorUtil.readDescriptorAndUpdateReport(report);
+        loadCacheFiles(report);
         deleteSourceFileIfInDropbox(report);
         removeDuplicatesOf(report);
         report.setEnabled(true);
@@ -271,6 +341,24 @@ public class ReportManager implements ReportImportCallbacks {
         broadcastUpdateReportList();
     }
 
+    @Override
+    public void downloadProgressPercentage(Report report, int value) {
+        report.setDescription("Download " + value + " % complete");
+        broadcastUpdateReportList();
+    }
+
+    @Override
+    public void downloadComplete(Report report, Activity activity, Uri reportZipPath) {
+        reports.remove(report);
+        importReportFromUri(reportZipPath);
+        broadcastUpdateReportList();
+    }
+
+    @Override
+    public void downloadError(Report report, String errorMessage) {
+        // TODO: add code
+    }
+
     private Drawable loadExternalLaunchIcon() {
         int color = context.getResources().getColor(R.color.colorPrimaryDark);
         int red = (color & 0x00ff0000) >> 16;
@@ -285,6 +373,18 @@ public class ReportManager implements ReportImportCallbacks {
         Drawable drawable = context.getResources().getDrawable(R.drawable.ic_launch);
         drawable.setColorFilter(filter);
         return drawable;
+    }
+
+    public void downloadReport(URL reportURL, Activity activity) {
+        Report report = new Report();
+        report.setTitle(reportURL.toString());
+        report.setDescription("Downloading...");
+        report.setEnabled(false);
+        reports.add(report);
+
+        DownloadReportTask downloadReportTask = new DownloadReportTask(report, activity, this);
+        downloadReportTask.execute(reportURL.toString());
+        broadcastUpdateReportList();
     }
 
     private Drawable loadThumbnailMissingIcon() {
@@ -315,13 +415,7 @@ public class ReportManager implements ReportImportCallbacks {
 
         Log.i(TAG, "finding existing reports in " + reportsDir);
 
-        File[] existingReports = reportsDir.listFiles(new FileFilter() {
-            @Override
-            public boolean accept(File path) {
-                return !path.getName().startsWith(DELETE_FILE_PREFIX) &&
-                        (uriCouldBeReport(Uri.fromFile(path)) || pathIsHtmlContentRoot(path));
-            }
-        });
+        File[] existingReports = ReportUtils.getReportDirectories(context, reportsDir);
 
         for (File reportPath : existingReports) {
             Log.d(TAG, "found existing potential report: " + reportPath);
@@ -334,6 +428,7 @@ public class ReportManager implements ReportImportCallbacks {
                 else if (reportPath.isDirectory()) {
                     report.setPath(reportPath);
                     ReportDescriptorUtil.readDescriptorAndUpdateReport(report);
+                    loadCacheFiles(report);
                     report.setEnabled(true);
                 }
                 else {
@@ -352,34 +447,6 @@ public class ReportManager implements ReportImportCallbacks {
             userGuideReport.setId(USER_GUIDE_REPORT_ID);
             reports.add(userGuideReport);
         }
-    }
-
-    private boolean pathIsHtmlContentRoot(File path) {
-        if (!path.isDirectory()) {
-            return false;
-        }
-        File index = new File(path, "index.html");
-        return index.exists();
-    }
-
-    private boolean uriCouldBeReport(Uri uri) {
-        String ext = extensionOfFile(uri.getPath()).toLowerCase();
-        if (supportedReportFileTypes.contains(ext)) {
-            return true;
-        }
-        String mimeType = context.getContentResolver().getType(uri);
-        if (mimeType != null) {
-            return supportedReportFileTypes.contains(mimeType);
-        }
-        return false;
-    }
-
-    private String extensionOfFile(String path) {
-        int dot = path.lastIndexOf('.');
-        if (dot < 0 || dot > path.length() - 2) {
-            return "";
-        }
-        return path.substring(dot + 1);
     }
 
     private void broadcastUpdateReportList() {
@@ -449,7 +516,7 @@ public class ReportManager implements ReportImportCallbacks {
      */
     private void continueImport(Report report) {
         String fileName = report.getSourceFileName();
-        String extension = extensionOfFile(fileName);
+        String extension = ReportUtils.extensionOfFile(fileName);
         String mimeType = context.getContentResolver().getType(report.getSourceFile());
 
         if ("application/zip".equals(mimeType) || "zip".equalsIgnoreCase(extension)) {
@@ -522,7 +589,7 @@ public class ReportManager implements ReportImportCallbacks {
                     return;
                 }
                 Uri uri = Uri.fromFile(file);
-                if (uriCouldBeReport(uri)) {
+                if (ReportUtils.uriCouldBeReport(context, uri)) {
                     // not imported yet
                     report = addNewReportForUri(Uri.fromFile(file));
                     broadcastUpdateReportList();
@@ -555,7 +622,7 @@ public class ReportManager implements ReportImportCallbacks {
     }
 
     private boolean renameThenDeleteInBackground(final File path) {
-        File deletePath = new File(path.getParent(), DELETE_FILE_PREFIX + path.getName());
+        File deletePath = new File(path.getParent(), ReportUtils.DELETE_FILE_PREFIX + path.getName());
         if (!path.renameTo(deletePath)) {
             Log.e(TAG, "failed to rename path for deleting: " + path);
         }
@@ -717,5 +784,63 @@ public class ReportManager implements ReportImportCallbacks {
         }
 
     }
+
+    private void loadCacheFiles(Report report){
+
+        List<File> files = new ArrayList<>();
+        File path = report.getPath();
+        getCacheFiles(path, files);
+
+        for(File file: files){
+
+            String fileString = file.getAbsolutePath();
+            String fileSubPath = fileString.replaceFirst(path.getAbsolutePath(), "");
+            if(fileSubPath.startsWith(File.separator)){
+                fileSubPath = fileSubPath.substring(1);
+            }
+            boolean shared = fileSubPath.startsWith(DICEConstants.DICE_REPORT_SHARED_DIRECTORY + File.separator);
+
+            String nameWithExtension = file.getName();
+            String name = removeExtension(nameWithExtension);
+
+            String reportName = removeExtension(report.getId());
+            name = GeoPackageWebViewClient.reportId(name, reportName, shared);
+            if(shared){
+                GeoPackageManager manager = GeoPackageFactory.getManager(context);
+                if(!manager.exists(name)) {
+                    manager.importGeoPackageAsExternalLink(file, name);
+                }
+            }
+
+            ReportCache reportCache = new ReportCache(name, fileString, shared);
+            report.addReportCache(reportCache);
+        }
+    }
+
+    private String removeExtension(String name){
+        String nameWithoutExtension = name;
+        int i = name.lastIndexOf('.');
+        if (i > 0) {
+            nameWithoutExtension = name.substring(0, i);
+        }
+        return nameWithoutExtension;
+    }
+
+    private void getCacheFiles(File path, List<File> files){
+
+        if(path.isDirectory()) {
+            for (File file : path.listFiles()) {
+                getCacheFiles(file, files);
+            }
+        }else{
+            String stringPath = path.getAbsolutePath();
+            if(stringPath.endsWith("." + GeoPackageConstants.GEOPACKAGE_EXTENSION)
+                    || stringPath.endsWith("." + GeoPackageConstants.GEOPACKAGE_EXTENDED_EXTENSION)){
+                files.add(path);
+            }
+        }
+    }
+
+
 
 }

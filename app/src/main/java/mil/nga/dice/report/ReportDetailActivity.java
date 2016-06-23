@@ -2,10 +2,11 @@ package mil.nga.dice.report;
 
 import android.annotation.TargetApi;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -18,11 +19,17 @@ import mil.nga.dice.JavaScriptAPI;
 import mil.nga.dice.R;
 
 
-public class ReportDetailActivity extends ActionBarActivity {
-	
+public class ReportDetailActivity extends AppCompatActivity {
+
+    /**
+     * Location services request code
+     */
+    public static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 100;
+
 	Report mReport;
     WebView reportWebView;
     JavaScriptAPI jsApi;
+    private GeoPackageWebViewClient geoPackageWebViewClient;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -40,9 +47,11 @@ public class ReportDetailActivity extends ActionBarActivity {
         settings.setJavaScriptEnabled(true);
         enableFileAjax(reportWebView);
 
+        geoPackageWebViewClient = new GeoPackageWebViewClient(this, mReport.getId());
+
         File reportFile = new File(mReport.getPath(), "index.html");
         if (reportFile.canRead() && reportFile.length() > 0) {
-            jsApi = JavaScriptAPI.addTo(reportWebView, mReport, this);
+            jsApi = JavaScriptAPI.addTo(reportWebView, mReport, this, geoPackageWebViewClient);
             if (savedInstanceState == null) {
                 reportWebView.loadUrl(Uri.fromFile(reportFile).toString());
             }
@@ -50,6 +59,7 @@ public class ReportDetailActivity extends ActionBarActivity {
                 reportWebView.restoreState(savedInstanceState);
             }
         }
+
 	}
 
     @Override
@@ -137,7 +147,9 @@ public class ReportDetailActivity extends ActionBarActivity {
     protected void onDestroy() {
         super.onDestroy();
 
-        jsApi.removeFromWebView();
+        if(jsApi != null) {
+            jsApi.removeFromWebView();
+        }
     }
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
@@ -149,5 +161,23 @@ public class ReportDetailActivity extends ActionBarActivity {
         Intent noteIntent = new Intent(this, NoteActivity.class);
         noteIntent.putExtra("report", mReport);
         startActivity(noteIntent);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+
+        // Check if permission was granted
+        boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+
+        switch(requestCode) {
+
+            case PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION:
+                jsApi.geolocateWithPermissions(granted);
+                break;
+
+        }
     }
 }

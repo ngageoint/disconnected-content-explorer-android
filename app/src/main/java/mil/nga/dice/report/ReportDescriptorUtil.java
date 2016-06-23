@@ -1,17 +1,24 @@
 package mil.nga.dice.report;
 
+import android.net.Uri;
 import android.util.Log;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
+
+import mil.nga.dice.DICEConstants;
+import mil.nga.geopackage.GeoPackageConstants;
 
 /**
  * Created by stjohnr on 3/18/15.
@@ -82,6 +89,11 @@ public class ReportDescriptorUtil {
             Log.e(TAG, "error parsing json for metadata file: " + metadataFile, e);
             return false;
         }
+
+        if(report.getId() == null && report.getPath() != null){
+            report.setId(report.getPath().getName());
+        }
+
         return true;
     }
 

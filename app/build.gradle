@@ -1,53 +1,62 @@
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
-
-import static com.android.builder.model.AndroidProject.FD_INTERMEDIATES
-
-
 apply plugin: 'com.android.application'
 
+def googleMapsApiReleaseKey = hasProperty('RELEASE_MAPS_DICE_API_KEY') ? RELEASE_MAPS_DICE_API_KEY: ''
+def googleMapsApiKeyDebug = hasProperty('DEBUG_MAPS_API_KEY') ? DEBUG_MAPS_API_KEY: ''
 
 project.ext {
     archivesBaseName = 'dice'
 }
 
 android {
-    compileSdkVersion 21
-    buildToolsVersion '21.1.2'
+    compileSdkVersion 24
+    buildToolsVersion '23.0.3'
+
+    dexOptions {
+        javaMaxHeapSize "4g"
+    }
+
     defaultConfig {
         minSdkVersion 16
-        targetSdkVersion 18
+        targetSdkVersion 23
+        multiDexEnabled true
         versionCode 7
-        versionName "1.0"
+        versionName '1.0'
         applicationId 'mil.nga.giat.dice'
         testApplicationId 'mil.nga.giat.dice.test'
     }
+
     signingConfigs {
-        fromProperties {
+        release {
             storeFile file(RELEASE_STORE_FILE)
             storePassword RELEASE_STORE_PASSWORD
             keyAlias RELEASE_KEY_ALIAS
             keyPassword RELEASE_KEY_PASSWORD
         }
     }
+
     buildTypes {
-        debug {
-            signingConfig signingConfigs.fromProperties
-        }
         release {
             minifyEnabled false
-            proguardFiles(getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt')
-            signingConfig signingConfigs.fromProperties
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+            signingConfig signingConfigs.release
+            resValue "string", "GOOGLE_MAPS_ANDROID_API_KEY", googleMapsApiReleaseKey
+        }
+        debug {
+            minifyEnabled false
+            resValue "string", "GOOGLE_MAPS_ANDROID_API_KEY", googleMapsApiKeyDebug
         }
     }
+
     packagingOptions {
         exclude 'META-INF/LICENSE'
         exclude 'META-INF/NOTICE'
     }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_7
         targetCompatibility JavaVersion.VERSION_1_7
     }
+
     sourceSets {
         androidTest {
             resources {
@@ -57,58 +66,17 @@ android {
     }
 }
 
-
 dependencies {
-    compile 'com.android.support:support-v4:21.0.3'
-    compile 'com.google.android.gms:play-services:6.5.87'
-    compile 'com.android.support:appcompat-v7:21.0.3'
-    compile 'com.android.support:cardview-v7:21.0.3'
-    compile 'com.android.support:recyclerview-v7:21.0.3'
+    compile 'com.android.support:support-v13:24.0.0'
+    compile 'com.google.android.gms:play-services:8.4.0'
+    compile 'com.android.support:multidex:1.0.1'
+    compile 'com.android.support:appcompat-v7:24.0.0'
+    compile 'com.android.support:cardview-v7:24.0.0'
+    compile 'com.android.support:recyclerview-v7:24.0.0'
     compile 'com.vividsolutions:jts:1.13'
     compile 'com.fasterxml.jackson.core:jackson-databind:2.5.1'
+    compile "mil.nga.geopackage:geopackage-android:1.2.9"
 
     androidTestCompile 'org.hamcrest:hamcrest-core:1.3'
 }
 
-task zipTestReports << {
-    FileTree resTree = ((FileTree)android.sourceSetsContainer.androidTest.resources.sourceFiles).matching {
-        it.include 'test_reports/*'
-    }
-    resTree.visit { FileVisitDetails reportRoot ->
-        if (reportRoot.file.parent =~ /^.*test_reports/) {
-            println "zipping test report from ${reportRoot.file.path}"
-            buildZip reportRoot.file
-        }
-    }
-}
-
-project.tasks.whenTaskAdded { Task t ->
-    if (t.name == 'processDebugTestJavaRes') {
-        t.dependsOn zipTestReports
-    }
-}
-
-def buildZip(File rootDir) {
-    File destFile = new File("$project.buildDir/${FD_INTERMEDIATES}/javaResources/${android.testVariants[0].dirName}/${rootDir.name}.zip".toString());
-    destFile.parentFile.mkdirs()
-    destFile.createNewFile()
-    try {
-        ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(destFile));
-        zipOut.putNextEntry(new ZipEntry(rootDir.getName()));
-        for (File file : rootDir.listFiles()) {
-            zipOut.putNextEntry(new ZipEntry(rootDir.getName() + "/" + file.getName()));
-            byte[] fileBytes = new byte[1 << 20];
-            int readCount;
-            FileInputStream fileIn = new FileInputStream(file);
-            while ((readCount = fileIn.read(fileBytes, 0, fileBytes.length)) >= 0) {
-                zipOut.write(fileBytes, 0, readCount);
-            }
-            zipOut.closeEntry();
-        }
-        zipOut.close();
-        return destFile;
-    }
-    catch (IOException e) {
-        throw new Error(e);
-    }
-}
