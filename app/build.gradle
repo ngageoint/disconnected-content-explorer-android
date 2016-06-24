@@ -19,8 +19,8 @@ android {
         minSdkVersion 16
         targetSdkVersion 23
         multiDexEnabled true
-        versionCode 7
-        versionName '1.0'
+        versionCode 8
+        versionName '1.1.0'
         applicationId 'mil.nga.giat.dice'
         testApplicationId 'mil.nga.giat.dice.test'
     }

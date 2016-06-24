@@ -27,7 +27,7 @@ public class AboutActivity extends AppCompatActivity {
             String aboutUrl = "file:///android_asset/legal/legal.html";
             try {
                 PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
-                String version = info.versionName + "." + info.versionCode;
+                String version = info.versionName;
                 aboutUrl += "?version=" + version;
             }
             catch (PackageManager.NameNotFoundException e) {
