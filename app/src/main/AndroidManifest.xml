@@ -4,6 +4,10 @@
     android:versionCode="1"
     android:versionName="1.0.0" >
 
+    <uses-sdk
+        android:minSdkVersion="16"
+        android:targetSdkVersion="23" />
+
     <permission
         android:name="mil.nga.dice.permission.MAPS_RECEIVE"
         android:protectionLevel="signature" />
@@ -52,6 +56,32 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/pdf" />
             </intent-filter>
+            <!-- Open files with matching extensions from a file browser -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="file" />
+                <data android:mimeType="*/*" />
+                <data android:pathPattern=".*\\.gpkg" /> <!-- GeoPackage -->
+                <data android:pathPattern=".*\\.gpkx" /> <!-- GeoPackage Extension -->
+                <data android:host="*" />
+            </intent-filter>
+            <!-- Email attachments -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+            <!-- Google Drive or sends from other apps -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
         </activity>
         <activity
             android:name=".report.ReportDetailActivity"
@@ -80,9 +110,18 @@
                 android:value="mil.nga.dice.ReportCollectionActivity" />
         </activity>
 
+        <activity
+            android:name=".map.OverlaysActivity"
+            android:label="@string/title_activity_overlays"
+            android:parentActivityName=".ReportCollectionActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="mil.nga.dice.ReportCollectionActivity" />
+        </activity>
+
         <meta-data
             android:name="com.google.android.maps.v2.API_KEY"
-            android:value="AIzaSyB5b4IowHnB6P_jyl6f0Y1rbfl9DLMaEY4" />
+            android:value="@string/GOOGLE_MAPS_ANDROID_API_KEY" />
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />

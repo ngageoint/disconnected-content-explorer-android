@@ -1,4 +1,4 @@
-;(function() {
+(function() {
 	if (window.WebViewJavascriptBridge) { return }
 
 	var messageHandlers = {}

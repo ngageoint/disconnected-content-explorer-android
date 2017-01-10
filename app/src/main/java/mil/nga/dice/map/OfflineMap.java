@@ -55,7 +55,7 @@ public class OfflineMap {
         backgroundTileOverlay = map.addTileOverlay(new TileOverlayOptions()
                 .tileProvider(BackgroundTileProvider.getInstance())
                 .visible(false)
-                .zIndex(1));
+                .zIndex(-4));
     }
 
     public void setVisible(boolean visible) {
@@ -152,7 +152,7 @@ public class OfflineMap {
 
         private PolygonOptions transformPolygon(com.vividsolutions.jts.geom.Polygon polygon) {
             PolygonOptions options = new PolygonOptions()
-                    .zIndex(2)
+                    .zIndex(-3)
                     .visible(false)
                     .fillColor(FILL_COLOR)
                     .strokeWidth(0);
