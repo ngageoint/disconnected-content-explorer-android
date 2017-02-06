@@ -37,17 +37,17 @@ import mil.nga.geopackage.features.user.FeatureCursor;
 import mil.nga.geopackage.features.user.FeatureDao;
 import mil.nga.geopackage.features.user.FeatureRow;
 import mil.nga.geopackage.geom.GeoPackageGeometryData;
-import mil.nga.geopackage.geom.map.GoogleMapShape;
-import mil.nga.geopackage.geom.map.GoogleMapShapeConverter;
-import mil.nga.geopackage.geom.map.GoogleMapShapeType;
+import mil.nga.geopackage.map.geom.GoogleMapShape;
+import mil.nga.geopackage.map.geom.GoogleMapShapeConverter;
+import mil.nga.geopackage.map.geom.GoogleMapShapeType;
 import mil.nga.geopackage.projection.Projection;
 import mil.nga.geopackage.tiles.features.FeatureTiles;
-import mil.nga.geopackage.tiles.features.MapFeatureTiles;
+import mil.nga.geopackage.tiles.features.DefaultFeatureTiles;
 import mil.nga.geopackage.tiles.features.custom.NumberFeaturesTile;
-import mil.nga.geopackage.tiles.overlay.BoundedOverlay;
-import mil.nga.geopackage.tiles.overlay.FeatureOverlay;
-import mil.nga.geopackage.tiles.overlay.FeatureOverlayQuery;
-import mil.nga.geopackage.tiles.overlay.GeoPackageOverlayFactory;
+import mil.nga.geopackage.map.tiles.overlay.BoundedOverlay;
+import mil.nga.geopackage.map.tiles.overlay.FeatureOverlay;
+import mil.nga.geopackage.map.tiles.overlay.FeatureOverlayQuery;
+import mil.nga.geopackage.map.tiles.overlay.GeoPackageOverlayFactory;
 import mil.nga.geopackage.tiles.user.TileDao;
 import mil.nga.wkb.geom.Geometry;
 import mil.nga.wkb.geom.GeometryType;
@@ -379,7 +379,7 @@ public class GeoPackageMapOverlays {
         for (FeatureDao featureDao : featureDaos) {
 
             // Create the feature tiles
-            FeatureTiles featureTiles = new MapFeatureTiles(context, featureDao);
+            FeatureTiles featureTiles = new DefaultFeatureTiles(context, featureDao);
 
             // Create an index manager
             FeatureIndexManager indexer = new FeatureIndexManager(context, geoPackage, featureDao);
@@ -421,7 +421,7 @@ public class GeoPackageMapOverlays {
         FeatureIndexManager indexer = new FeatureIndexManager(context, geoPackage, featureDao);
 
         if (indexer.isIndexed()) {
-            FeatureTiles featureTiles = new MapFeatureTiles(context, featureDao);
+            FeatureTiles featureTiles = new DefaultFeatureTiles(context, featureDao);
             Integer maxFeaturesPerTile = null;
             if (featureDao.getGeometryType() == GeometryType.POINT) {
                 maxFeaturesPerTile = DICEConstants.DICE_CACHE_FEATURE_TILES_MAX_POINTS_PER_TILE;
