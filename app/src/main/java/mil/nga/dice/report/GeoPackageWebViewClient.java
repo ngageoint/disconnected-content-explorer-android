@@ -31,11 +31,11 @@ import mil.nga.geopackage.factory.GeoPackageFactory;
 import mil.nga.geopackage.features.index.FeatureIndexManager;
 import mil.nga.geopackage.features.user.FeatureDao;
 import mil.nga.geopackage.tiles.features.FeatureTiles;
-import mil.nga.geopackage.tiles.features.MapFeatureTiles;
-import mil.nga.geopackage.tiles.overlay.BoundedOverlay;
-import mil.nga.geopackage.tiles.overlay.FeatureOverlay;
-import mil.nga.geopackage.tiles.overlay.FeatureOverlayQuery;
-import mil.nga.geopackage.tiles.overlay.GeoPackageOverlayFactory;
+import mil.nga.geopackage.tiles.features.DefaultFeatureTiles;
+import mil.nga.geopackage.map.tiles.overlay.BoundedOverlay;
+import mil.nga.geopackage.map.tiles.overlay.FeatureOverlay;
+import mil.nga.geopackage.map.tiles.overlay.FeatureOverlayQuery;
+import mil.nga.geopackage.map.tiles.overlay.GeoPackageOverlayFactory;
 import mil.nga.geopackage.tiles.retriever.GeoPackageTile;
 import mil.nga.geopackage.tiles.retriever.GeoPackageTileRetriever;
 import mil.nga.geopackage.tiles.user.TileDao;
@@ -301,7 +301,7 @@ public class GeoPackageWebViewClient extends WebViewJavascriptBridgeClient {
                         for (FeatureDao featureDao : featureDaos) {
 
                             // Create the feature tiles
-                            FeatureTiles featureTiles = new MapFeatureTiles(context, featureDao);
+                            FeatureTiles featureTiles = new DefaultFeatureTiles(context, featureDao);
 
                             // Create an index manager
                             FeatureIndexManager indexer = new FeatureIndexManager(context, geoPackage, featureDao);
@@ -316,7 +316,7 @@ public class GeoPackageWebViewClient extends WebViewJavascriptBridgeClient {
                 } else if (geoPackage.isFeatureTable(table)) {
 
                     FeatureDao featureDao = geoPackage.getFeatureDao(table);
-                    FeatureTiles featureTiles = new MapFeatureTiles(context, featureDao);
+                    FeatureTiles featureTiles = new DefaultFeatureTiles(context, featureDao);
                     FeatureIndexManager indexer = new FeatureIndexManager(context, geoPackage, featureDao);
                     featureTiles.setIndexManager(indexer);
                     if (featureTiles.isIndexQuery() && featureTiles.queryIndexedFeaturesCount(xValue, yValue, zoomValue) > 0) {
