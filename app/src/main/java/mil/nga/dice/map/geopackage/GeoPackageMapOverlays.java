@@ -348,10 +348,14 @@ public class GeoPackageMapOverlays {
             }
 
             if (addNew) {
-                if (geoPackage.isTileTable(table)) {
-                    addTileTable(geoPackage, table, data);
-                } else if (geoPackage.isFeatureTable(table)) {
-                    addFeatureTable(geoPackage, table, data);
+                try {
+                    if (geoPackage.isTileTable(table)) {
+                        addTileTable(geoPackage, table, data);
+                    } else if (geoPackage.isFeatureTable(table)) {
+                        addFeatureTable(geoPackage, table, data);
+                    }
+                }catch(Exception e){
+                    Log.e(GeoPackageMapOverlays.class.getSimpleName(), "Failed to add table: " + table + ", GeoPackage: " + geoPackage.getName(), e);
                 }
             }
         }
