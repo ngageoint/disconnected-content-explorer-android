@@ -15,6 +15,7 @@ import android.os.PowerManager;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 
 import java.io.File;
 import java.io.InputStream;
@@ -336,9 +337,12 @@ public class GeoPackageCache {
                 final ContentResolver resolver = activity.getContentResolver();
                 InputStream stream = resolver.openInputStream(uri);
                 if (!manager.importGeoPackage(database, stream, true, this)) {
-                    return "Failed to import GeoPackage '" + database + "'";
+                    String message = "Failed to import GeoPackage '" + database + "'";
+                    Log.e(GeoPackageCache.class.getSimpleName(), message);
+                    return message;
                 }
             } catch (final Exception e) {
+                Log.e(GeoPackageCache.class.getSimpleName(), "Failed to import GeoPackage. URI: " + uri.getPath(), e);
                 return e.toString();
             }
             return null;
