@@ -468,42 +468,47 @@ public class GeoPackageMapOverlays {
                 final int totalCount = featureCursor.getCount();
                 int count = 0;
                 while (featureCursor.moveToNext()) {
-                    FeatureRow featureRow = featureCursor.getRow();
-                    GeoPackageGeometryData geometryData = featureRow.getGeometry();
-                    if (geometryData != null && !geometryData.isEmpty()) {
-                        Geometry geometry = geometryData.getGeometry();
-                        if (geometry != null) {
-                            GoogleMapShape shape = shapeConverter.toShape(geometry);
+                    try {
+                        FeatureRow featureRow = featureCursor.getRow();
+                        GeoPackageGeometryData geometryData = featureRow.getGeometry();
+                        if (geometryData != null && !geometryData.isEmpty()) {
+                            Geometry geometry = geometryData.getGeometry();
+                            if (geometry != null) {
+                                GoogleMapShape shape = shapeConverter.toShape(geometry);
 
-                            if (shape.getShapeType() == GoogleMapShapeType.LAT_LNG) {
-                                LatLng latLng = (LatLng) shape.getShape();
-                                MarkerOptions markerOptions = new MarkerOptions();
-                                markerOptions.position(latLng);
-                                markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
-                                shape = new GoogleMapShape(GeometryType.POINT, GoogleMapShapeType.MARKER_OPTIONS, markerOptions);
-                            }
-
-                            GoogleMapShape mapShape = GoogleMapShapeConverter.addShapeToMap(map, shape);
-
-                            if (mapShape.getShapeType() == GoogleMapShapeType.MARKER) {
-                                Marker marker = (Marker) mapShape.getShape();
-                                MarkerFeature markerFeature = new MarkerFeature();
-                                markerFeature.database = geoPackage.getName();
-                                markerFeature.tableName = name;
-                                markerFeature.featureId = featureRow.getId();
-                                markerIds.put(marker.getId(), markerFeature);
-                            }
-
-                            tableData.addMapShape(mapShape);
-
-                            if (++count >= maxFeaturesPerTable) {
-                                if (count < totalCount) {
-                                    Toast.makeText(context, geoPackage.getName() + "-" + name
-                                            + "- added " + count + " of " + totalCount, Toast.LENGTH_LONG).show();
+                                if (shape.getShapeType() == GoogleMapShapeType.LAT_LNG) {
+                                    LatLng latLng = (LatLng) shape.getShape();
+                                    MarkerOptions markerOptions = new MarkerOptions();
+                                    markerOptions.position(latLng);
+                                    markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
+                                    shape = new GoogleMapShape(GeometryType.POINT, GoogleMapShapeType.MARKER_OPTIONS, markerOptions);
                                 }
-                                break;
+
+                                GoogleMapShape mapShape = GoogleMapShapeConverter.addShapeToMap(map, shape);
+
+                                if (mapShape.getShapeType() == GoogleMapShapeType.MARKER) {
+                                    Marker marker = (Marker) mapShape.getShape();
+                                    MarkerFeature markerFeature = new MarkerFeature();
+                                    markerFeature.database = geoPackage.getName();
+                                    markerFeature.tableName = name;
+                                    markerFeature.featureId = featureRow.getId();
+                                    markerIds.put(marker.getId(), markerFeature);
+                                }
+
+                                tableData.addMapShape(mapShape);
+
+                                if (++count >= maxFeaturesPerTable) {
+                                    if (count < totalCount) {
+                                        Toast.makeText(context, geoPackage.getName() + "-" + name
+                                                + "- added " + count + " of " + totalCount, Toast.LENGTH_LONG).show();
+                                    }
+                                    break;
+                                }
                             }
                         }
+                    }catch(Exception e){
+                        Log.e(GeoPackageMapOverlays.class.getSimpleName(), "Failed to display feature. GeoPackage: " + geoPackage.getName()
+                                + ", Table: " + featureDao.getTableName() + ", Row: " + featureCursor.getPosition(), e);
                     }
                 }
             } finally {
